@@ -1,6 +1,7 @@
 import { Context } from 'koishi'
 import { resolve } from 'path'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFile, writeFile } from 'fs/promises'
+import { existsSync } from 'fs' // 正确引入同步检查文件存在方法
 import { Config } from './index'
 import { utils } from './utils'
 
@@ -29,22 +30,25 @@ export class Zanwo {
     this.config = config
     this.logger = ctx.logger('zanwo')
     this.filePath = resolve(ctx.baseDir, 'data', 'zanwo.json')
+    this.loadTargetsFromFile().catch(err =>
+      this.logger.error('加载点赞列表失败:', err)
+    );
 
-    this.loadTargetsFromFile()
     this.startAutoLikeTimer()
   }
 
   /**
-   * 从文件加载点赞目标
+   * 从文件异步加载点赞目标
    */
-  private loadTargetsFromFile(): void {
+  private async loadTargetsFromFile(): Promise<void> {
     try {
-      if (existsSync(this.filePath)) {
-        const data = JSON.parse(readFileSync(this.filePath, 'utf8'))
+      if (existsSync(this.filePath)) { // 使用同步方法检查文件是否存在
+        const data = JSON.parse(await readFile(this.filePath, 'utf8'))
         this.targets = new Set(Array.isArray(data) ? data : [])
       }
     } catch (error) {
       this.logger.error('加载点赞列表失败:', error)
+      this.targets = new Set();
     }
   }
 
@@ -78,11 +82,14 @@ export class Zanwo {
     this.logger.info(`开始自动点赞，共 ${targets.length} 人`)
 
     try {
-      const bot = this.ctx.bots.values().next().value
-
       let successCount = 0;
       for (const userId of targets) {
-        const success = await this.sendLike({bot}, userId);
+        const session = { bot: this.ctx.bots.find(bot => bot.platform === 'onebot') }
+        if (!session.bot) {
+          this.logger.warn('找不到可用的机器人，跳过点赞')
+          break
+        }
+        const success = await this.sendLike(session, userId);
         if (success) successCount++;
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -94,11 +101,11 @@ export class Zanwo {
   }
 
   /**
-   * 将点赞目标列表保存到JSON文件
+   * 异步保存点赞目标列表
    */
-  private saveTargets(): void {
+  private async saveTargets(): Promise<void> {
     try {
-      writeFileSync(this.filePath, JSON.stringify([...this.targets]))
+      await writeFile(this.filePath, JSON.stringify([...this.targets]))
     } catch (error) {
       this.logger.error('保存点赞列表失败:', error)
     }
@@ -127,14 +134,16 @@ export class Zanwo {
    */
   async sendLike(session, userId: string, count: number = 10): Promise<boolean> {
     try {
+      let successCount = 0;
       for (let i = 0; i < count; i++) {
         try {
           await session.bot.internal.sendLike(userId, 1);
+          successCount++;
           await new Promise(resolve => setTimeout(resolve, 300));
-        } catch {
+        } catch (err) {
         }
       }
-      return true;
+      return successCount > 0;
     } catch {
       return false;
     }
@@ -154,7 +163,7 @@ export class Zanwo {
       .action(async ({ session }) => {
         const success = await this.sendLike(session, session.userId)
         const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败')
-        await utils.autoRecall(session, message)
+        await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
 
     // 查看点赞列表
@@ -189,12 +198,12 @@ export class Zanwo {
         const userId = utils.parseTarget(target)
         if (!userId || userId === session.userId) {
           const message = await session.send('找不到指定用户')
-          await utils.autoRecall(session, message)
+          await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
           return
         }
         const success = await this.sendLike(session, userId)
         const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败')
-        await utils.autoRecall(session, message)
+        await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
 
     // 执行手动点赞

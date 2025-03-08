@@ -2,11 +2,8 @@ import { Context, h, Session } from "koishi";
 import { Config } from "./index";
 
 /**
- * 戳一戳响应接口
+ * 定义戳一戳响应的结构
  * @interface PokeResponse
- * @property {('command'|'message')} type - 响应类型，可以是执行命令或发送消息
- * @property {string} content - 响应内容，命令字符串或消息内容
- * @property {number} weight - 响应权重，用于随机选择
  */
 interface PokeResponse {
   type: "command" | "message";
@@ -15,94 +12,101 @@ interface PokeResponse {
 }
 
 /**
- * 戳一戳功能类
- * @class Poke
- * @description 处理戳一戳命令和事件响应
+ * 处理戳一戳功能的类
  */
 export class Poke {
   private cache = new Map<string, number>();
-  private ctx: Context;
-  private config: Config['poke'];
+  private disposer: (() => void) | null = null;
+  private totalWeight: number = 0;
 
-  constructor(ctx: Context, config: Config['poke']) {
-    this.ctx = ctx;
-    this.config = config;
+  /**
+   * 创建戳一戳处理器
+   * @param ctx Koishi 上下文
+   * @param config 戳一戳配置
+   */
+  constructor(private ctx: Context, private config: Config['poke']) {
+    if (config?.responses?.length) {
+      this.totalWeight = config.responses.reduce((sum, resp) => sum + resp.weight, 0);
+      if (this.totalWeight > 100) {
+        const scaleFactor = 100 / this.totalWeight;
+        config.responses.forEach(resp => {
+          resp.weight = resp.weight * scaleFactor;
+        });
+        this.totalWeight = 100;
+      }
+    }
   }
 
-  registerCommand() {
+  /**
+   * 清理资源，移除事件监听器
+   */
+  dispose() {
+    if (this.disposer) {
+      this.disposer();
+      this.disposer = null;
+    }
+    this.cache.clear();
+  }
 
+  /**
+   * 注册戳一戳命令
+   */
+  registerCommand() {
     this.ctx.command('poke [target:user]', '戳一戳')
       .usage('戳一戳指定用户或自己')
       .example('poke @用户 - 戳一戳指定用户')
       .action(async ({ session }, target) => {
-        if (!session.onebot) {
-          return;
-        }
+        if (!session.onebot) return;
 
-        const params = { user_id: session.userId };
-        if (target) {
-          params.user_id = target;
-        }
+        const params = {
+          user_id: target || session.userId,
+          group_id: session.isDirect ? undefined : session.guildId
+        };
 
-        if (session.isDirect) {
-          await session.onebot._request("friend_poke", params);
-        } else {
-          params["group_id"] = session.guildId;
-          await session.onebot._request("group_poke", params);
-        }
+        const api = session.isDirect ? "friend_poke" : "group_poke";
+        await session.onebot._request(api, params);
       });
 
     this.registerNoticeListener();
   }
 
   /**
-   * 注册戳一戳事件监听
-   * @description 监听 OneBot 平台的戳一戳通知事件并处理响应
+   * 注册戳一戳通知监听器
    */
   registerNoticeListener() {
-    this.ctx.platform('onebot').on("notice", async (session: Session) => {
-      if (session.subtype != "poke") {
-        return;
-      }
-      if (session.targetId != session.selfId) {
+    this.disposer = this.ctx.platform('onebot').on("notice", async (session: Session) => {
+      if (session.subtype !== "poke" || session.targetId !== session.selfId) {
         return;
       }
 
-      if (this.config?.interval > 0 && this.cache.has(session.userId)) {
-        const ts = this.cache.get(session.userId)!;
-        if (session.timestamp - ts < this.config.interval) {
+      if (this.config?.interval > 0) {
+        const lastTime = this.cache.get(session.userId);
+        if (lastTime && (session.timestamp - lastTime < this.config.interval)) {
           return;
         }
+        this.cache.set(session.userId, session.timestamp);
       }
 
-      this.cache.set(session.userId, session.timestamp);
+      if (!this.config?.responses?.length) return;
+      const response = this.randomResponse();
 
-      if (!this.config?.responses || this.config.responses.length === 0) {
-        return;
-      }
-
-      const response = this.randomResponse(this.config.responses);
-
-      switch (response.type) {
-        case "command":
-          await session.execute(response.content);
-          break;
-        case "message":
-          const content = h.parse(response.content, session);
-          await session.sendQueued(content);
-          break;
+      if (response.type === "command") {
+        await session.execute(response.content);
+      } else {
+        await session.sendQueued(h.parse(response.content, session));
       }
     });
   }
 
   /**
-   * 根据权重随机选择一个响应
-   * @param {PokeResponse[]} responses - 响应列表
-   * @returns {PokeResponse} 选中的响应
+   * 随机选择一个响应
+   * @returns 选中的响应，如果没有配置响应则返回null
    */
-  private randomResponse(responses: PokeResponse[]): PokeResponse {
-    const totalWeight = responses.reduce((sum, resp) => sum + resp.weight, 0);
-    const random = Math.random() * totalWeight;
+  private randomResponse(): PokeResponse {
+    if (!this.config?.responses?.length) return null;
+
+    const responses = this.config.responses;
+    const random = Math.random() * this.totalWeight;
     let sum = 0;
 
     for (const response of responses) {

@@ -1,49 +1,39 @@
 import { Session, h } from 'koishi';
 
 /**
- * 消息处理工具集
- * @namespace messageHandler
- */
-const messageHandler = {
-  /**
-   * 自动撤回消息
-   * @param {Session} session - 会话上下文
-   * @param {any} message - 要撤回的消息
-   * @param {number} delay - 延迟时间(毫秒)
-   * @returns {Promise<() => void>} 取消撤回的函数
-   */
-  autoRecall: async (session: Session, message: any, delay = 10000) => {
-    if (!message) return;
-    const timer = setTimeout(async () => {
-      try {
-        const messages = Array.isArray(message) ? message : [message];
-        await Promise.all(messages.map(msg => {
-          const msgId = typeof msg === 'string' ? msg : msg?.id;
-          if (msgId) return session.bot.deleteMessage(session.channelId, msgId);
-        }));
-      } catch (error) {
-        console.warn('Auto recall failed:', error);
-      }
-    }, delay);
-    return () => clearTimeout(timer);
-  }
-};
-
-/**
  * 工具函数集合
- * @namespace utils
  */
 export const utils = {
   /**
    * 解析目标用户ID
-   * @param {string} input - 输入文本
-   * @returns {string|null} 解析后的用户ID
+   * @param target 可能包含用户ID的文本
+   * @returns 解析出的用户ID或null
    */
-  parseTarget: (input: string): string | null => {
-    if (!input?.trim()) return null;
-    const parsed = h.parse(input)[0];
-    return parsed?.type === 'at' ? parsed.attrs.id : input.trim();
+  parseTarget(target: string): string | null {
+    if (!target) return null
+    // 从@消息中提取ID
+    const atMatch = target.match(/@?(\d+)/)
+    if (atMatch) return atMatch[1]
+    // 纯数字检查
+    if (/^\d+$/.test(target.trim())) return target.trim()
+
+    return null
   },
 
-  ...messageHandler
-};
+  /**
+   * 自动撤回消息
+   * @param session 会话对象
+   * @param message 消息ID
+   * @param delay 延迟时间（毫秒）
+   */
+  async autoRecall(session: Session, message: string | number, delay: number = 5000): Promise<void> {
+    if (!message) return
+
+    try {
+      setTimeout(async () => {
+        await session.bot?.deleteMessage(session.channelId, message.toString())
+      }, delay)
+    } catch (error) {
+    }
+  }
+}

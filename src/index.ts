@@ -1,7 +1,8 @@
-import { Context, Schema } from 'koishi'
+import { Context, Schema, Session } from 'koishi'
 import {} from "koishi-plugin-adapter-onebot";
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
+import { utils } from './utils'
 
 export const name = 'onebot-tool'
 
@@ -11,7 +12,8 @@ declare module "koishi" {
   }
 
   interface Session {
-    targetId: string;
+    targetId?: string;
+    subtype?: string;
   }
 }
 
@@ -50,7 +52,7 @@ export const Config: Schema<Config> = Schema.object({
 
   poke: Schema.object({
     interval: Schema.number()
-      .default(1000)
+      .default(1000).min(0)
       .description('最小触发间隔（毫秒）'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
@@ -59,14 +61,10 @@ export const Config: Schema<Config> = Schema.object({
       ]).description('响应类型'),
       content: Schema.string().description('响应内容'),
       weight: Schema.number()
-        .default(50)
-        .min(0)
-        .max(100)
-        .role('slider')
+        .default(50).min(0).max(100)
         .description('触发权重')
     }))
-    .role('table')
-    .default([
+    .role('table').default([
       {
         type: 'message',
         content: '<at id={userId}/>戳你一下',
@@ -90,4 +88,9 @@ export function apply(ctx: Context, config: Config) {
 
   const poke = new Poke(onebotCtx, config.poke)
   poke.registerCommand()
+
+  ctx.on('dispose', () => {
+    zanwo.dispose()
+    poke.dispose()
+  })
 }
