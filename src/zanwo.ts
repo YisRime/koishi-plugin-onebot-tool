@@ -55,6 +55,11 @@ export class Zanwo {
     if (this.timer) {
       clearInterval(this.timer)
     }
+
+    if (!this.config.autoLike) {
+      return
+    }
+
     this.timer = setInterval(() => {
       this.executeAutoLike()
     }, 86400000)

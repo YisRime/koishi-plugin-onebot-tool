@@ -11,6 +11,7 @@
 - 用户发送"赞我"后，机器人会给该用户点赞
 - 支持设置管理员账号进行权限管理
 - 可配置是否开启回赞提醒功能
+- 支持每日自动点赞功能
 
 ### 戳一戳响应
 
@@ -23,9 +24,10 @@
 
 ```yaml
 zanwo:
-  adminAccount: ''        # 管理员QQ号
+  adminAccount: ''       # 管理员QQ号
   adminOnly: true        # 仅管理员可配置列表
   enableNotify: false    # 开启回赞提醒
+  autoLike: true         # 启用每日自动点赞
 
 poke:
   interval: 1000        # 触发冷却时间(ms)

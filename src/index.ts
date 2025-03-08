@@ -20,6 +20,7 @@ export interface Config {
     adminAccount: string
     adminOnly: boolean
     enableNotify: boolean
+    autoLike: boolean
   }
   poke: {
     interval?: number
@@ -36,13 +37,16 @@ export const Config: Schema<Config> = Schema.object({
     adminAccount: Schema.string()
       .description('管理员账号')
       .default(''),
-    adminOnly: Schema.boolean()
-      .description('仅管理员可配置列表')
-      .default(true),
     enableNotify: Schema.boolean()
       .description('开启回赞提醒')
       .default(false),
-  }).description('赞我功能配置'),
+    adminOnly: Schema.boolean()
+      .description('仅管理员可配置列表')
+      .default(true),
+    autoLike: Schema.boolean()
+      .description('开启自动批量点赞')
+      .default(true),
+  }).description('点赞配置'),
 
   poke: Schema.object({
     interval: Schema.number()
@@ -53,7 +57,7 @@ export const Config: Schema<Config> = Schema.object({
         Schema.const('command').description('执行命令'),
         Schema.const('message').description('发送消息')
       ]).description('响应类型'),
-      content: Schema.string().description('响应内容（命令或消息）'),
+      content: Schema.string().description('响应内容'),
       weight: Schema.number()
         .default(50)
         .min(0)
@@ -75,7 +79,7 @@ export const Config: Schema<Config> = Schema.object({
       }
     ])
     .description('响应列表')
-  }).description('戳一戳功能配置')
+  }).description('戳一戳配置')
 })
 
 export function apply(ctx: Context, config: Config) {
