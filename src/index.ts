@@ -1,123 +1,89 @@
 import { Context, Schema } from 'koishi'
-import { ZanwoMgr } from './ZanwoMgr'
-import { utils } from './utils'
+import {} from "koishi-plugin-adapter-onebot";
+import { Zanwo } from './zanwo'
+import { Poke } from './poke'
 
 export const name = 'onebot-tool'
 
+declare module "koishi" {
+  interface Events {
+    notice(session: Session): void;
+  }
+
+  interface Session {
+    targetId: string;
+  }
+}
+
 export interface Config {
-  adminAccount: string
-  enableNotify: boolean
-  adminOnly: boolean
-  enableAutoBatch: boolean
+  zanwo: {
+    adminAccount: string
+    adminOnly: boolean
+    enableNotify: boolean
+  }
+  poke: {
+    interval?: number
+    responses?: Array<{
+      type: "command" | "message";
+      content: string;
+      weight: number;
+    }>
+  }
 }
 
 export const Config: Schema<Config> = Schema.object({
-  adminAccount: Schema.string().description('管理员账号'),
-  enableNotify: Schema.boolean().default(true).description('启用点赞成功时提示点赞主人'),
-  adminOnly: Schema.boolean().default(true).description('仅管理员可配置一键点赞列表'),
-  enableAutoBatch: Schema.boolean().default(false).description('启用每日自动批量点赞'),
-}).description('点赞配置')
+  zanwo: Schema.object({
+    adminAccount: Schema.string()
+      .description('管理员账号')
+      .default(''),
+    adminOnly: Schema.boolean()
+      .description('仅管理员可配置列表')
+      .default(true),
+    enableNotify: Schema.boolean()
+      .description('开启回赞提醒')
+      .default(false),
+  }).description('赞我功能配置'),
+
+  poke: Schema.object({
+    interval: Schema.number()
+      .default(1000)
+      .description('最小触发间隔（毫秒）'),
+    responses: Schema.array(Schema.object({
+      type: Schema.union([
+        Schema.const('command').description('执行命令'),
+        Schema.const('message').description('发送消息')
+      ]).description('响应类型'),
+      content: Schema.string().description('响应内容（命令或消息）'),
+      weight: Schema.number()
+        .default(50)
+        .min(0)
+        .max(100)
+        .role('slider')
+        .description('触发权重')
+    }))
+    .role('table')
+    .default([
+      {
+        type: 'message',
+        content: '<at id={userId}/>戳你一下',
+        weight: 50
+      },
+      {
+        type: 'command',
+        content: 'poke',
+        weight: 50
+      }
+    ])
+    .description('响应列表')
+  }).description('戳一戳功能配置')
+})
 
 export function apply(ctx: Context, config: Config) {
-  const zanwoMgr = new ZanwoMgr(ctx);
+  const onebotCtx = ctx.platform('onebot')
 
-  // 设置自动点赞任务
-  if (config.enableAutoBatch) {
-    ctx.setInterval(async () => {
-      const targets = zanwoMgr.getList();
-      if (targets.length) {
-        const bots = Array.from(ctx.bots.values());
-        for (const bot of bots) {
-          const session = bot.session();
-          if (session) {
-            await zanwoMgr.sendBatchLikes(session, targets);
-            break;
-          }
-        }
-      }
-    }, 24 * 60 * 60 * 1000);
-  }
+  const zanwo = new Zanwo(onebotCtx, config.zanwo)
+  zanwo.registerCommands()
 
-/**
- * 点赞命令处理
- * @description
- * 改为子命令结构:
- * 1. zanwo - 默认点赞自己
- * 2. zanwo.list - 查看点赞目标列表
- * 3. zanwo.add - 添加点赞目标
- * 4. zanwo.remove - 移除点赞目标
- * 5. zanwo.user - 指定目标点赞
- */
-  const zanwo = ctx.command('zanwo')
-    .alias('赞我')
-    .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除')
-    .action(async ({ session }) => {
-      const success = await zanwoMgr.sendLikes(session, session.userId);
-      const message = await session.send(
-        success
-          ? `点赞完成，记得回赞${config.enableNotify ? config.adminAccount : ''}哦~`
-          : '点赞失败'
-      );
-      await utils.autoRecall(session, message);
-    });
-
-  zanwo.subcommand('.list')
-    .action(async ({ session }) => {
-      if (config.adminOnly && session.userId !== config.adminAccount) {
-        return '仅管理员可用';
-      }
-
-      const targets = zanwoMgr.getList();
-      return targets.length
-        ? `当前点赞列表：${targets.join(', ')}`
-        : '点赞列表为空';
-    });
-
-  zanwo.subcommand('.add <target:text>')
-    .action(async ({ session }, target) => {
-      if (config.adminOnly && session.userId !== config.adminAccount) {
-        return '仅管理员可用';
-      }
-
-      const parsedTarget = utils.parseTarget(target);
-      if (!parsedTarget) {
-        return '找不到指定用户';
-      }
-
-      const success = await zanwoMgr.addQQ(parsedTarget);
-      return success ? `已添加 ${parsedTarget} 到点赞列表` : '添加失败';
-    });
-
-  zanwo.subcommand('.remove <target:text>')
-    .action(async ({ session }, target) => {
-      if (config.adminOnly && session.userId !== config.adminAccount) {
-        return '仅管理员可用';
-      }
-
-      const parsedTarget = utils.parseTarget(target);
-      if (!parsedTarget) {
-        return '找不到指定用户';
-      }
-
-      const success = await zanwoMgr.removeQQ(parsedTarget);
-      return success ? `已从点赞列表移除 ${parsedTarget}` : '移除失败';
-    });
-
-  zanwo.subcommand('.user <target:text>')
-    .action(async ({ session }, target) => {
-      const parsedTarget = utils.parseTarget(target);
-      if (!parsedTarget || parsedTarget === session.userId) {
-        const message = await session.send('找不到指定用户');
-        await utils.autoRecall(session, message);
-        return;
-      }
-
-      const success = await zanwoMgr.sendLikes(session, parsedTarget);
-      const message = await session.send(
-        success
-          ? `点赞完成，记得回赞${config.enableNotify ? config.adminAccount : ''}哦~`
-          : '点赞失败'
-      );
-      await utils.autoRecall(session, message);
-    });
+  const poke = new Poke(onebotCtx, config.poke)
+  poke.registerCommand()
 }

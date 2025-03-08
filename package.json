@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-onebot-tool",
-  "description": "适用于 Onebot 的小工具",
+  "description": "适用于 Onebot 的小工具, 包含赞我、戳一戳等功能",
   "version": "0.0.1",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
@@ -21,10 +21,14 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "onebot",
+    "zanwo",
+    "poke"
   ],
   "devDependencies": {},
   "peerDependencies": {
-    "koishi": "^4.18.7"
+    "koishi": "^4.18.7",
+    "@koishijs/plugin-adapter-onebot": "^6.0.0"
   }
 }
