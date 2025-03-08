@@ -2,13 +2,21 @@
   "name": "koishi-plugin-onebot-tool",
   "description": "适用于 Onebot 的小工具",
   "version": "0.0.1",
+  "contributors": [
+    "Yis_Rime <yis_rime@outlook.com>"
+  ],
+  "homepage": "https://github.com/YisRime/koishi-plugin-onebot-tool",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YisRime/koishi-plugin-onebot-tool.git"
+  },
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
     "lib",
     "dist"
   ],
-  "license": "MIT",
+  "license": "GPL-3.0",
   "scripts": {},
   "keywords": [
     "chatbot",
