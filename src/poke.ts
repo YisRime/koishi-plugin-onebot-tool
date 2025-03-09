@@ -59,14 +59,11 @@ export class Poke {
           return '无法识别目标用户';
         }
 
-        const params = {
-          user_id: targetId,
-          group_id: session.isDirect ? undefined : session.guildId
-        };
-
-        const api = session.isDirect ? "friend_poke" : "group_poke";
         try {
-          await session.onebot._request(api, params);
+          await session.onebot._request('send_poke', {
+            user_id: targetId,
+            group_id: session.isDirect ? undefined : session.guildId
+          });
         } catch (error) {
           return '戳一戳失败，请稍后重试';
         }

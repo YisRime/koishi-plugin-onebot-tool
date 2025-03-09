@@ -35,8 +35,6 @@ export interface Config {
   }
   reaction: {
     enabled: boolean
-    groupReaction: boolean
-    emojiLike: boolean
   }
 }
 
@@ -90,15 +88,9 @@ export const Config: Schema<Config> = Schema.object({
 
   reaction: Schema.object({
     enabled: Schema.boolean()
-      .description('启用自动表情回应')
-      .default(false),
-    groupReaction: Schema.boolean()
-      .description('使用群表情回应')
-      .default(true),
-    emojiLike: Schema.boolean()
-      .description('对表情进行点赞')
+      .description('启用表情回复')
       .default(true)
-  }).description('表情回应配置')
+  }).description('表情回复配置')
 })
 
 export function apply(ctx: Context, config: Config) {
@@ -113,10 +105,8 @@ export function apply(ctx: Context, config: Config) {
   reaction.registerCommand()
 
   if (config.reaction.enabled) {
-    ctx.middleware(async (session, next) => {
-      if (session.platform === 'onebot') {
-        await reaction.processMessage(session);
-      }
+    onebotCtx.middleware(async (session, next) => {
+      await reaction.processMessage(session);
       return next();
     });
   }
