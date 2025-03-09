@@ -1,8 +1,7 @@
-import { Context, Schema, Session } from 'koishi'
+import { Context, Schema } from 'koishi'
 import {} from "koishi-plugin-adapter-onebot";
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
-import { utils } from './utils'
 
 export const name = 'onebot-tool'
 

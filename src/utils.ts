@@ -1,4 +1,4 @@
-import { Session, h } from 'koishi';
+import { Session } from 'koishi';
 
 /**
  * 工具函数集合

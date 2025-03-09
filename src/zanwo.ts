@@ -1,7 +1,7 @@
 import { Context } from 'koishi'
 import { resolve } from 'path'
 import { readFile, writeFile } from 'fs/promises'
-import { existsSync } from 'fs' // 正确引入同步检查文件存在方法
+import { existsSync } from 'fs'
 import { Config } from './index'
 import { utils } from './utils'
 
@@ -42,7 +42,7 @@ export class Zanwo {
    */
   private async loadTargetsFromFile(): Promise<void> {
     try {
-      if (existsSync(this.filePath)) { // 使用同步方法检查文件是否存在
+      if (existsSync(this.filePath)) {
         const data = JSON.parse(await readFile(this.filePath, 'utf8'))
         this.targets = new Set(Array.isArray(data) ? data : [])
       }
@@ -157,9 +157,9 @@ export class Zanwo {
     const notifyText = enableNotify ? adminAccount : ''
     const checkAdmin = (session) => !adminOnly || session.userId === adminAccount
 
-    const zanwo = this.ctx.command('zanwo', '点赞')
+    const zanwo = this.ctx.command('zanwo', '自动点赞')
       .alias('赞我')
-      .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除')
+      .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表')
       .action(async ({ session }) => {
         const success = await this.sendLike(session, session.userId)
         const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败')

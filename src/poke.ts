@@ -1,5 +1,6 @@
 import { Context, h, Session } from "koishi";
 import { Config } from "./index";
+import { utils } from "./utils";
 
 /**
  * 定义戳一戳响应的结构
@@ -52,19 +53,28 @@ export class Poke {
    * 注册戳一戳命令
    */
   registerCommand() {
-    this.ctx.command('poke [target:user]', '戳一戳')
+    this.ctx.command('poke <target:text>', '戳一戳')
       .usage('戳一戳指定用户或自己')
       .example('poke @用户 - 戳一戳指定用户')
       .action(async ({ session }, target) => {
         if (!session.onebot) return;
 
+        const targetId = target ? utils.parseTarget(target) : session.userId;
+        if (!targetId) {
+          return '无法识别目标用户';
+        }
+
         const params = {
-          user_id: target || session.userId,
+          user_id: targetId,
           group_id: session.isDirect ? undefined : session.guildId
         };
 
         const api = session.isDirect ? "friend_poke" : "group_poke";
-        await session.onebot._request(api, params);
+        try {
+          await session.onebot._request(api, params);
+        } catch (error) {
+          return '戳一戳失败，请稍后重试';
+        }
       });
 
     this.registerNoticeListener();
