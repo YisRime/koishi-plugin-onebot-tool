@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-onebot-tool",
   "description": "适用于 Onebot 的小工具, 包含赞我、戳一戳等功能",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
   ],

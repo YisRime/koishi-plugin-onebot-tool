@@ -40,16 +40,16 @@ export class Reaction {
    */
   registerCommand() {
     this.ctx.command('reaction [faceId:string]', '表情回复')
-      .usage('回复表情消息，默认回复随机表情，可以是逗号分隔的多个表情ID')
+      .usage('回复表情消息，默认点赞,可以逗号分隔以回应多个表情，使用"all"回复随机表情')
       .action(async ({ session }, faceId) => {
         try {
           const targetMessageId = session.quote?.messageId || session.messageId
-          // 无参数时发送随机表情
           if (!faceId) {
+            return this.addReaction(session, targetMessageId, "76")
+          }
+          if (faceId.toLowerCase() === 'all') {
             return this.sendRandomFaces(session, 20, targetMessageId)
           }
-
-          // 处理逗号分隔的多个表情ID
           if (faceId.includes(',')) {
             const validFaceIds = faceId.split(',')
               .map(id => id.trim())
@@ -57,17 +57,14 @@ export class Reaction {
                 const numId = parseInt(id)
                 return !isNaN(numId) && numId >= 0 && numId <= this.MAX_FACE_ID
               })
-            // 无有效ID时发送默认表情
             if (!validFaceIds.length) {
               return this.addReaction(session, targetMessageId, "76")
             }
-            // 添加多个表情
             await Promise.all(validFaceIds.map(id =>
               this.addReaction(session, targetMessageId, id)
             ))
             return
           }
-          // 单个表情ID
           const isValid = (() => {
             const id = parseInt(faceId)
             return !isNaN(id) && id >= 0 && id <= this.MAX_FACE_ID
