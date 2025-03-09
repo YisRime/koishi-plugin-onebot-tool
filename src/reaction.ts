@@ -23,9 +23,11 @@ export class Reaction {
     if (elements.length === 0) return false
 
     try {
-      // 检测到表情后，随机回复一个表情
       const faceId = this.getRandomFaceId()
-      await session.send(h('face', { id: faceId }))
+      await session.onebot._request('set_msg_emoji_like', {
+        message_id: session.messageId,
+        emoji_id: faceId
+      })
       return true
     } catch (error) {
       this.ctx.logger('reaction').warn('表情回复失败:', error)
@@ -42,18 +44,27 @@ export class Reaction {
       .usage('回复表情消息')
       .action(async ({ session, options }, faceId) => {
         try {
+          const targetMessageId = session.quote?.messageId || session.messageId;
+
           if (options.all) {
-            return await this.sendRandomFaces(session, 30);
+            await this.sendRandomFaces(session, 30, Number(targetMessageId));
+            return;
           } else if (faceId) {
             if (!this.isValidFaceId(faceId)) {
               return '表情ID无效，应为0-220之间的数字';
             }
-            await session.send(h('face', { id: faceId }));
-            return '已发送表情';
+            await session.onebot._request('set_msg_emoji_like', {
+              message_id: targetMessageId,
+              emoji_id: faceId
+            });
+            return;
           } else {
             const randomFaceId = this.getRandomFaceId();
-            await session.send(h('face', { id: randomFaceId }));
-            return '已发送随机表情';
+            await session.onebot._request('set_msg_emoji_like', {
+              message_id: targetMessageId,
+              emoji_id: randomFaceId
+            });
+            return;
           }
         } catch (error) {
           this.ctx.logger('reaction').warn('手动表情回复失败:', error);
@@ -84,26 +95,34 @@ export class Reaction {
    * 发送多个随机表情
    * @param session 会话对象
    * @param count 表情数量
-   * @returns 操作结果消息
+   * @param targetMessageId 目标消息ID
+   * @returns 操作结果消息，仅在失败时返回
    */
-  private async sendRandomFaces(session, count: number): Promise<string> {
+  private async sendRandomFaces(session, count: number, targetMessageId?: number): Promise<string | void> {
+    const messageId = targetMessageId || session.quote?.messageId || session.messageId;
+    if (!messageId) {
+      return '无法确定目标消息';
+    }
+
     const faceIds = new Set<number>();
     while (faceIds.size < Math.min(count, 221)) {
       faceIds.add(Math.floor(Math.random() * 221));
     }
 
-    const faces = Array.from(faceIds).map(id => h('face', { id: id.toString() }));
+    for (const id of faceIds) {
+      try {
+        await session.onebot._request('set_msg_emoji_like', {
+          message_id: messageId,
+          emoji_id: id.toString()
+        });
 
-    const batchSize = 10;
-    for (let i = 0; i < faces.length; i += batchSize) {
-      const batch = faces.slice(i, i + batchSize);
-      await session.send(h('message', batch));
-
-      if (i + batchSize < faces.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        this.ctx.logger('reaction').warn('添加表情回应失败:', error);
       }
     }
 
-    return `已发送 ${faces.length} 个随机表情`;
+
+    return;
   }
 }
