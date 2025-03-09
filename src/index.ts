@@ -2,6 +2,7 @@ import { Context, Schema } from 'koishi'
 import {} from "koishi-plugin-adapter-onebot";
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
+import { Reaction } from './reaction'
 
 export const name = 'onebot-tool'
 
@@ -24,12 +25,18 @@ export interface Config {
     autoLike: boolean
   }
   poke: {
+    enabled: boolean
     interval?: number
     responses?: Array<{
       type: "command" | "message";
       content: string;
       weight: number;
     }>
+  }
+  reaction: {
+    enabled: boolean
+    groupReaction: boolean
+    emojiLike: boolean
   }
 }
 
@@ -50,6 +57,9 @@ export const Config: Schema<Config> = Schema.object({
   }).description('点赞配置'),
 
   poke: Schema.object({
+    enabled: Schema.boolean()
+      .description('启用戳一戳响应')
+      .default(true),
     interval: Schema.number()
       .default(1000).min(0)
       .description('最小触发间隔（毫秒）'),
@@ -76,17 +86,46 @@ export const Config: Schema<Config> = Schema.object({
       }
     ])
     .description('响应列表')
-  }).description('戳一戳配置')
+  }).description('戳一戳配置'),
+
+  reaction: Schema.object({
+    enabled: Schema.boolean()
+      .description('启用自动表情回应')
+      .default(false),
+    groupReaction: Schema.boolean()
+      .description('使用群表情回应')
+      .default(true),
+    emojiLike: Schema.boolean()
+      .description('对表情进行点赞')
+      .default(true)
+  }).description('表情回应配置')
 })
 
 export function apply(ctx: Context, config: Config) {
   const onebotCtx = ctx.platform('onebot')
 
   const zanwo = new Zanwo(onebotCtx, config.zanwo)
-  zanwo.registerCommands()
-
   const poke = new Poke(onebotCtx, config.poke)
+  const reaction = new Reaction(onebotCtx, config.reaction)
+
+  zanwo.registerCommands()
   poke.registerCommand()
+  reaction.registerCommand()
+
+  if (config.reaction.enabled) {
+    ctx.middleware(async (session, next) => {
+      if (session.platform === 'onebot') {
+        await reaction.processMessage(session);
+      }
+      return next();
+    });
+  }
+
+  if (config.poke.enabled) {
+    onebotCtx.on('notice', async (session) => {
+      await poke.processNotice(session);
+    });
+  }
 
   ctx.on('dispose', () => {
     zanwo.dispose()

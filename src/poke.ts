@@ -17,7 +17,6 @@ interface PokeResponse {
  */
 export class Poke {
   private cache = new Map<string, number>();
-  private disposer: (() => void) | null = null;
   private totalWeight: number = 0;
 
   /**
@@ -39,13 +38,9 @@ export class Poke {
   }
 
   /**
-   * 清理资源，移除事件监听器
+   * 清理资源
    */
   dispose() {
-    if (this.disposer) {
-      this.disposer();
-      this.disposer = null;
-    }
     this.cache.clear();
   }
 
@@ -76,36 +71,40 @@ export class Poke {
           return '戳一戳失败，请稍后重试';
         }
       });
-
-    this.registerNoticeListener();
   }
 
   /**
-   * 注册戳一戳通知监听器
+   * 处理戳一戳通知
+   * 由外部监听器调用
    */
-  registerNoticeListener() {
-    this.disposer = this.ctx.platform('onebot').on("notice", async (session: Session) => {
-      if (session.subtype !== "poke" || session.targetId !== session.selfId) {
-        return;
+  async processNotice(session: Session): Promise<boolean> {
+    if (session.subtype !== "poke" || session.targetId !== session.selfId) {
+      return false;
+    }
+
+    if (this.config?.interval > 0) {
+      const lastTime = this.cache.get(session.userId);
+      if (lastTime && (session.timestamp - lastTime < this.config.interval)) {
+        return false;
       }
+      this.cache.set(session.userId, session.timestamp);
+    }
 
-      if (this.config?.interval > 0) {
-        const lastTime = this.cache.get(session.userId);
-        if (lastTime && (session.timestamp - lastTime < this.config.interval)) {
-          return;
-        }
-        this.cache.set(session.userId, session.timestamp);
-      }
+    if (!this.config?.responses?.length) return false;
+    const response = this.randomResponse();
+    if (!response) return false;
 
-      if (!this.config?.responses?.length) return;
-      const response = this.randomResponse();
-
+    try {
       if (response.type === "command") {
         await session.execute(response.content);
       } else {
         await session.sendQueued(h.parse(response.content, session));
       }
-    });
+      return true;
+    } catch (error) {
+      this.ctx.logger('poke').warn('戳一戳响应失败:', error);
+      return false;
+    }
   }
 
   /**
