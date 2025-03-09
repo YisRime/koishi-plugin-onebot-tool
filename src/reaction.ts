@@ -1,36 +1,36 @@
-import { Context, h } from 'koishi'
+import { Context, h, Session } from 'koishi'
 import { Config } from './index'
 
 /**
  * 表情回复功能处理类
  */
 export class Reaction {
+  private readonly logger: ReturnType<Context['logger']>
+  private readonly MAX_FACE_ID = 220
+
   /**
    * 创建表情回复处理器
    * @param ctx Koishi 上下文
    * @param config 表情回复配置
    */
-  constructor(private ctx: Context, private config: Config['reaction']) {}
+  constructor(private ctx: Context, private config: Config['reaction']) {
+    this.logger = ctx.logger('reaction')
+  }
 
   /**
    * 处理消息中的表情回复
    * 由外部中间件调用
    */
-  async processMessage(session): Promise<boolean> {
+  async processMessage(session: Session): Promise<boolean> {
     if (session.userId === session.selfId) return false
 
-    let elements = h.select(h.parse(session.content), 'face')
-    if (elements.length === 0) return false
+    if (!h.select(h.parse(session.content), 'face').length) return false
 
     try {
-      const faceId = this.getRandomFaceId()
-      await session.onebot._request('set_msg_emoji_like', {
-        message_id: session.messageId,
-        emoji_id: faceId
-      })
+      await this.addReaction(session, session.messageId, Math.floor(Math.random() * (this.MAX_FACE_ID + 1)).toString())
       return true
     } catch (error) {
-      this.ctx.logger('reaction').warn('表情回复失败:', error)
+      this.logger.warn('表情回复操作失败:', error)
       return false
     }
   }
@@ -40,89 +40,76 @@ export class Reaction {
    */
   registerCommand() {
     this.ctx.command('reaction [faceId:string]', '表情回复')
-      .option('all', '-a 回复多个随机表情')
-      .usage('回复表情消息')
-      .action(async ({ session, options }, faceId) => {
+      .usage('回复表情消息，默认回复随机表情，可以是逗号分隔的多个表情ID')
+      .action(async ({ session }, faceId) => {
         try {
-          const targetMessageId = session.quote?.messageId || session.messageId;
-
-          if (options.all) {
-            await this.sendRandomFaces(session, 30, Number(targetMessageId));
-            return;
-          } else if (faceId) {
-            if (!this.isValidFaceId(faceId)) {
-              return '表情ID无效，应为0-220之间的数字';
-            }
-            await session.onebot._request('set_msg_emoji_like', {
-              message_id: targetMessageId,
-              emoji_id: faceId
-            });
-            return;
-          } else {
-            const randomFaceId = this.getRandomFaceId();
-            await session.onebot._request('set_msg_emoji_like', {
-              message_id: targetMessageId,
-              emoji_id: randomFaceId
-            });
-            return;
+          const targetMessageId = session.quote?.messageId || session.messageId
+          // 无参数时发送随机表情
+          if (!faceId) {
+            return this.sendRandomFaces(session, 20, targetMessageId)
           }
+
+          // 处理逗号分隔的多个表情ID
+          if (faceId.includes(',')) {
+            const validFaceIds = faceId.split(',')
+              .map(id => id.trim())
+              .filter(id => {
+                const numId = parseInt(id)
+                return !isNaN(numId) && numId >= 0 && numId <= this.MAX_FACE_ID
+              })
+            // 无有效ID时发送默认表情
+            if (!validFaceIds.length) {
+              return this.addReaction(session, targetMessageId, "76")
+            }
+            // 添加多个表情
+            await Promise.all(validFaceIds.map(id =>
+              this.addReaction(session, targetMessageId, id)
+            ))
+            return
+          }
+          // 单个表情ID
+          const isValid = (() => {
+            const id = parseInt(faceId)
+            return !isNaN(id) && id >= 0 && id <= this.MAX_FACE_ID
+          })()
+
+          return this.addReaction(
+            session,
+            targetMessageId,
+            isValid ? faceId : "76"
+          )
         } catch (error) {
-          this.ctx.logger('reaction').warn('手动表情回复失败:', error);
-          return '表情回复失败';
+          this.logger.warn('表情回复操作失败:', error)
         }
-      });
+      })
   }
 
   /**
-   * 判断表情ID是否有效
-   * @param faceId 表情ID
-   * @returns 是否为有效表情ID
+   * 添加表情回应
    */
-  private isValidFaceId(faceId: string): boolean {
-    const id = parseInt(faceId);
-    return !isNaN(id) && id >= 0 && id <= 220;
-  }
-
-  /**
-   * 获取一个随机的表情ID
-   * @returns 随机表情ID
-   */
-  private getRandomFaceId(): string {
-    return Math.floor(Math.random() * 221).toString();
+  private async addReaction(session: Session, messageId: number | string, emojiId: string): Promise<void> {
+    await session.onebot._request('set_msg_emoji_like', {
+      message_id: messageId,
+      emoji_id: emojiId
+    })
+    await new Promise(resolve => setTimeout(resolve, 100))
   }
 
   /**
    * 发送多个随机表情
-   * @param session 会话对象
-   * @param count 表情数量
-   * @param targetMessageId 目标消息ID
-   * @returns 操作结果消息，仅在失败时返回
    */
-  private async sendRandomFaces(session, count: number, targetMessageId?: number): Promise<string | void> {
-    const messageId = targetMessageId || session.quote?.messageId || session.messageId;
-    if (!messageId) {
-      return '无法确定目标消息';
+  private async sendRandomFaces(session: Session, count: number, messageId: number | string): Promise<void> {
+    const faceIds = new Set<number>()
+    while (faceIds.size < Math.min(count, this.MAX_FACE_ID + 1)) {
+      faceIds.add(Math.floor(Math.random() * (this.MAX_FACE_ID + 1)))
     }
 
-    const faceIds = new Set<number>();
-    while (faceIds.size < Math.min(count, 221)) {
-      faceIds.add(Math.floor(Math.random() * 221));
-    }
-
-    for (const id of faceIds) {
-      try {
-        await session.onebot._request('set_msg_emoji_like', {
-          message_id: messageId,
-          emoji_id: id.toString()
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        this.ctx.logger('reaction').warn('添加表情回应失败:', error);
+    try {
+      for (const id of faceIds) {
+        await this.addReaction(session, messageId, id.toString())
       }
+    } catch (error) {
+      this.logger.warn('表情回复操作失败:', error)
     }
-
-
-    return;
   }
 }
