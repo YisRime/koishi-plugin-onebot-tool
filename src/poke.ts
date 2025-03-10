@@ -48,24 +48,27 @@ export class Poke {
    * 注册戳一戳命令
    */
   registerCommand() {
-    this.ctx.command('poke <target:text>', '戳一戳')
+    this.ctx.command('poke [target:text]', '戳一戳')
       .usage('戳一戳指定用户或自己')
+      .example('poke - 戳一戳自己')
       .example('poke @用户 - 戳一戳指定用户')
+      .example('poke 123456 - 戳一戳用户123456')
       .action(async ({ session }, target) => {
         if (!session.onebot) return;
 
-        const targetId = target ? utils.parseTarget(target) : session.userId;
-        if (!targetId) {
-          return '无法识别目标用户';
-        }
-
         try {
+          const parsedId = target ? utils.parseTarget(target) : null;
+          const targetId = (!target || !parsedId) ? session.userId : parsedId;
+
           await session.onebot._request('send_poke', {
             user_id: targetId,
             group_id: session.isDirect ? undefined : session.guildId
           });
+
+          return '';
         } catch (error) {
-          return '戳一戳失败，请稍后重试';
+          this.ctx.logger('poke').warn('戳一戳失败:', error);
+          return;
         }
       });
   }

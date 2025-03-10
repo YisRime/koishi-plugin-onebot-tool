@@ -1,4 +1,4 @@
-import { Session } from 'koishi';
+import { Session, h } from 'koishi';
 
 /**
  * 工具函数集合
@@ -11,10 +11,18 @@ export const utils = {
    */
   parseTarget(target: string): string | null {
     if (!target) return null
-    // 从@消息中提取ID
-    const atMatch = target.match(/@?(\d+)/)
+
+    try {
+      const elements = h.parse(target)
+      const atElement = h.select(elements, 'at')[0]
+      if (atElement && atElement.attrs?.id) {
+        return atElement.attrs.id
+      }
+    } catch (e) {
+    }
+
+    const atMatch = target.match(/@(\d+)/)
     if (atMatch) return atMatch[1]
-    // 纯数字检查
     if (/^\d+$/.test(target.trim())) return target.trim()
 
     return null

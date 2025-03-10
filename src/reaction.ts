@@ -40,7 +40,10 @@ export class Reaction {
    */
   registerCommand() {
     this.ctx.command('reaction [faceId:string]', '表情回复')
-      .usage('回复表情消息，默认点赞,可以逗号分隔以回应多个表情，使用"all"回复随机表情')
+      .usage('回复表情消息，默认点赞，输入表情 ID 回应，使用"all"回复随机表情')
+      .example('reaction - 给消息点赞')
+      .example('reaction 1,2 - 回复表情(ID:1,2)')
+      .example('reaction all - 回复随机表情')
       .action(async ({ session }, faceId) => {
         try {
           const targetMessageId = session.quote?.messageId || session.messageId

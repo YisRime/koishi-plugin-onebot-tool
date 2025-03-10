@@ -35,6 +35,7 @@ export interface Config {
   }
   reaction: {
     enabled: boolean
+    autoReaction?: boolean
   }
 }
 
@@ -89,6 +90,9 @@ export const Config: Schema<Config> = Schema.object({
   reaction: Schema.object({
     enabled: Schema.boolean()
       .description('启用表情回复')
+      .default(true),
+    autoReaction: Schema.boolean()
+      .description('启用随机表情回复')
       .default(true)
   }).description('表情回复配置')
 })
@@ -106,7 +110,9 @@ export function apply(ctx: Context, config: Config) {
 
   if (config.reaction.enabled) {
     onebotCtx.middleware(async (session, next) => {
-      await reaction.processMessage(session);
+      if (config.reaction.autoReaction) {
+        await reaction.processMessage(session);
+      }
       return next();
     });
   }
