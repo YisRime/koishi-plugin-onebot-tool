@@ -131,92 +131,53 @@ export class Stick {
         try {
           let emojiList = Object.entries(EMOJI_MAP)
             .filter(([name]) => !keyword || name.includes(keyword))
-            .sort((a, b) => a[0].localeCompare(b[0]));
+            // 按ID排序（数字ID优先，字母ID其次）
+            .sort((a, b) => {
+              const numA = parseInt(a[1]);
+              const numB = parseInt(b[1]);
+              if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+              }
+              if (!isNaN(numA)) return -1;
+              if (!isNaN(numB)) return 1;
+              return a[1].localeCompare(b[1]);
+            });
+
           const totalItems = emojiList.length;
           if (totalItems === 0) {
             return `没有找到${keyword ? `包含"${keyword}"的` : ''}表情`;
           }
+          const formatEmoji = ([name, id]: [string, string]) => `${name}-${id}`;
           if (keyword) {
             const formattedItems = [];
-            for (let i = 0; i < emojiList.length; i += 5) {
-              const row = emojiList.slice(i, i + 5)
-                .map(([name, id]) => `${name}(${id})`)
-                .join(' | ');
+            for (let i = 0; i < emojiList.length; i += 4) {
+              const row = emojiList.slice(i, i + 4)
+                .map(formatEmoji).join('|');
               formattedItems.push(row);
             }
             return `搜索"${keyword}"结果: ${totalItems}个\n` + formattedItems.join('\n');
           }
-          // 浏览模式：使用分页
           else {
             const { page } = options;
-            const pageNum = Math.max(1, page);
-            const pageSize = 50;
+            const itemsPerRow = 4;
+            const rowsPerPage = 9;
+            const pageSize = itemsPerRow * rowsPerPage;
             const totalPages = Math.ceil(totalItems / pageSize) || 1;
-            const validPage = Math.min(pageNum, totalPages);
+            const validPage = Math.min(Math.max(1, page), totalPages);
             const startIdx = (validPage - 1) * pageSize;
             const currentPageItems = emojiList.slice(startIdx, startIdx + pageSize);
             const formattedItems = [];
-            for (let i = 0; i < currentPageItems.length; i += 5) {
-              const row = currentPageItems.slice(i, i + 5)
-                .map(([name, id]) => `${name}(${id})`)
-                .join('|');
+            for (let i = 0; i < currentPageItems.length; i += itemsPerRow) {
+              const row = currentPageItems.slice(i, i + itemsPerRow)
+                .map(formatEmoji).join('|');
               formattedItems.push(row);
             }
-            const header = `表情列表 ${validPage}/${totalPages}页`;
+            const header = `表情列表 第${validPage}/${totalPages}页`;
             return header + '\n' + formattedItems.join('\n');
           }
         } catch (error) {
           this.logger.warn('获取表情列表失败:', error);
           return '获取表情列表失败';
-        }
-      });
-    // 骰子子命令
-    stick.subcommand('.dice [value:number]', '发送骰子')
-    .usage('发送骰子，可指定骰子点数(1-6)')
-      .example('stick.dice - 随机骰子')
-      .example('stick.dice 6 - 指定6点')
-      .action(async ({ session }, value) => {
-        try {
-          if (value !== undefined) {
-            const validValue = Math.max(1, Math.min(6, Math.floor(value)));
-            return session.send(h('dice', { result: String(validValue) }));
-          }
-          return session.send(h('dice'));
-        } catch (error) {
-          this.logger.warn('骰子发送失败:', error);
-          return '发送骰子失败';
-        }
-      });
-    // 猜拳子命令
-    stick.subcommand('.rps [type:string]', '发送猜拳')
-      .usage('发送猜拳，可指定结果(1=布,2=剪刀,3=石头/拳头)')
-      .example('stick.rps - 随机猜拳')
-      .example('stick.rps 3/石头 - 出石头/拳头')
-      .action(async ({ session }, type) => {
-        try {
-          if (type !== undefined) {
-            let value: number | undefined;
-            if (/^[1-3]$/.test(type)) {
-              value = parseInt(type);
-            }
-            else {
-              const typeMap = {
-                '石头': 3,
-                '拳头': 3,
-                '剪刀': 2,
-                '布': 1,
-              };
-              value = typeMap[type.toLowerCase()];
-            }
-            if (value !== undefined) {
-              return session.send(h('rps', { result: String(value) }));
-            }
-            return `不支持的类型: ${type}，请使用 1-3 或 布/剪刀/石头/拳头`;
-          }
-          return session.send(h('rps'));
-        } catch (error) {
-          this.logger.warn('猜拳发送失败:', error);
-          return '发送猜拳失败';
         }
       });
   }
