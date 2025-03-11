@@ -145,7 +145,7 @@ export class Stick {
 
           const totalItems = emojiList.length;
           if (totalItems === 0) {
-            return `没有找到${keyword ? `包含"${keyword}"的` : ''}表情`;
+            return `没有找到表情${keyword ? `"${keyword}"` : ''}`;
           }
           const formatEmoji = ([name, id]: [string, string]) => `${name}-${id}`;
           if (keyword) {
@@ -155,7 +155,7 @@ export class Stick {
                 .map(formatEmoji).join('|');
               formattedItems.push(row);
             }
-            return `搜索"${keyword}"结果: ${totalItems}个\n` + formattedItems.join('\n');
+            return `表情"${keyword}"（共${totalItems}个）\n` + formattedItems.join('\n');
           }
           else {
             const { page } = options;
@@ -172,7 +172,7 @@ export class Stick {
                 .map(formatEmoji).join('|');
               formattedItems.push(row);
             }
-            const header = `表情列表 第${validPage}/${totalPages}页`;
+            const header = `表情列表（第${validPage}/${totalPages}页）`;
             return header + '\n' + formattedItems.join('\n');
           }
         } catch (error) {
