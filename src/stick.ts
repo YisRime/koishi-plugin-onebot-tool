@@ -53,11 +53,9 @@ export class Stick {
    */
   async processMessage(session: Session): Promise<boolean> {
     if (session.userId === session.selfId) return false
-
     const elements = h.select(h.parse(session.content), 'face')
     if (!elements.length) return false
-
-    try {
+    return this.wrapWithErrorHandling(async () => {
       let responded = false
       for (const element of elements) {
         if (element.attrs?.id) {
@@ -66,10 +64,71 @@ export class Stick {
         }
       }
       return responded
+    }, false)
+  }
+
+  /**
+   * 获取目标消息ID
+   */
+  private getTargetMessageId(session: Session): string | number {
+    return session.quote?.messageId || session.messageId
+  }
+
+  /**
+   * 错误处理包装器
+   * @param fn 需要执行的异步函数
+   * @param defaultValue 发生错误时返回的默认值
+   */
+  private async wrapWithErrorHandling<T>(fn: () => Promise<T>, defaultValue: T): Promise<T> {
+    try {
+      return await fn()
     } catch (error) {
-      this.logger.warn('表情回复操作失败:', error)
-      return false
+      this.logger.warn('表情操作失败:', error)
+      return defaultValue
     }
+  }
+
+  /**
+   * 对表情列表进行排序
+   */
+  private sortEmojiList(emojiList: [string, string][]): [string, string][] {
+    return emojiList.sort((a, b) => {
+      const numA = parseInt(a[1]);
+      const numB = parseInt(b[1]);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+      return a[1].localeCompare(b[1]);
+    });
+  }
+
+  /**
+   * 格式化表情列表为文本显示
+   */
+  private formatEmojiList(emojiList: [string, string][], page = 1, keyword = ''): string {
+    const totalItems = emojiList.length;
+    if (totalItems === 0) {
+      return keyword ? `没有找到表情"${keyword}"` : '没有可用的表情';
+    }
+    const itemsPerRow = 4;
+    const rowsPerPage = 9;
+    const pageSize = itemsPerRow * rowsPerPage;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const validPage = Math.min(Math.max(1, page), totalPages);
+    const startIdx = (validPage - 1) * pageSize;
+    const currentPageItems = emojiList.slice(startIdx, startIdx + pageSize);
+    const formattedRows = [];
+    for (let i = 0; i < currentPageItems.length; i += itemsPerRow) {
+      const row = currentPageItems.slice(i, i + itemsPerRow)
+        .map(([name, id]) => `${name}-${id}`).join('|');
+      formattedRows.push(row);
+    }
+    const header = keyword
+      ? `表情"${keyword}"（共${totalItems}个）`
+      : `表情列表（第${validPage}/${totalPages}页）`;
+    return header + '\n' + formattedRows.join('\n');
   }
 
   /**
@@ -80,105 +139,64 @@ export class Stick {
       .usage('回复表情消息，默认点赞，支持输入多个表情 ID 或名称')
       .example('stick 76,77 - 使用表情ID回复')
       .example('stick 赞,踩 - 使用表情名称回复')
-      .action(async ({ session }, faceId) => {
-        try {
-          const targetMessageId = session.quote?.messageId || session.messageId
+      .action(({ session }, faceId) => {
+        return this.wrapWithErrorHandling(async () => {
+          const targetMessageId = this.getTargetMessageId(session);
           if (!faceId) {
-            return this.addReaction(session, targetMessageId, "76")
+            return this.addReaction(session, targetMessageId, "76");
           }
           // 处理多个表情ID
           if (faceId.includes(',')) {
-            const parts = faceId.split(',').map(part => part.trim())
+            const parts = faceId.split(',').map(part => part.trim());
             const validFaceIds = parts
               .map(part => this.resolveEmojiId(part))
-              .filter(Boolean) as string[]
-
+              .filter(Boolean) as string[];
             if (validFaceIds.length === 0) {
-              return this.addReaction(session, targetMessageId, "76")
+              return this.addReaction(session, targetMessageId, "76");
             }
             // 依次发送表情
             for (const id of validFaceIds) {
-              await this.addReaction(session, targetMessageId, id)
-              await new Promise(resolve => setTimeout(resolve, 500))
+              await this.addReaction(session, targetMessageId, id);
+              await new Promise(resolve => setTimeout(resolve, 500));
             }
-            return
+            return;
           }
           // 处理单个表情
-          const emojiId = this.resolveEmojiId(faceId) || "76"
-          return this.addReaction(session, targetMessageId, emojiId)
-        } catch (error) {
-          this.logger.warn('表情回复操作失败:', error)
-        }
-      })
+          const emojiId = this.resolveEmojiId(faceId) || "76";
+          return this.addReaction(session, targetMessageId, emojiId);
+        }, undefined);
+      });
 
     // 随机表情子命令
     stick.subcommand('.random [count:number]', '回复随机表情', { authority: 2 })
-      .action(async ({ session }, count = 20) => {
-        try {
-          const targetMessageId = session.quote?.messageId || session.messageId
-          return this.sendRandomFaces(session, count, targetMessageId)
-        } catch (error) {
-          this.logger.warn('随机表情回复操作失败:', error)
-        }
+      .action(({ session }, count = 20) => {
+        return this.wrapWithErrorHandling(async () => {
+          const targetMessageId = this.getTargetMessageId(session);
+          return this.sendRandomFaces(session, count, targetMessageId);
+        }, undefined);
+      });
+
+    // 表情搜索子命令
+    stick.subcommand('.search [keyword:string]', '搜索表情')
+      .example('stick.search 龙 - 搜索包含"龙"的表情')
+      .action(({ }, keyword) => {
+        return this.wrapWithErrorHandling(async () => {
+          if (!keyword) {
+            return '请输入要搜索的关键词';
+          }
+          const emojiList = this.sortEmojiList(
+            Object.entries(EMOJI_MAP).filter(([name]) => name.includes(keyword))
+          );
+          return this.formatEmojiList(emojiList, 1, keyword);
+        }, '搜索表情失败');
       })
-
-    // 表情列表查询子命令
-    stick.subcommand('.list [keyword:string]', '查看支持的表情列表')
-      .option('page', '-p <page:number> 页码', { fallback: 1 })
-      .example('stick.list - 查看所有表情')
-      .example('stick.list 龙 - 查看包含"龙"的表情')
-      .action(({ options }, keyword) => {
-        try {
-          let emojiList = Object.entries(EMOJI_MAP)
-            .filter(([name]) => !keyword || name.includes(keyword))
-            // 按ID排序（数字ID优先，字母ID其次）
-            .sort((a, b) => {
-              const numA = parseInt(a[1]);
-              const numB = parseInt(b[1]);
-              if (!isNaN(numA) && !isNaN(numB)) {
-                return numA - numB;
-              }
-              if (!isNaN(numA)) return -1;
-              if (!isNaN(numB)) return 1;
-              return a[1].localeCompare(b[1]);
-            });
-
-          const totalItems = emojiList.length;
-          if (totalItems === 0) {
-            return `没有找到表情${keyword ? `"${keyword}"` : ''}`;
-          }
-          const formatEmoji = ([name, id]: [string, string]) => `${name}-${id}`;
-          if (keyword) {
-            const formattedItems = [];
-            for (let i = 0; i < emojiList.length; i += 4) {
-              const row = emojiList.slice(i, i + 4)
-                .map(formatEmoji).join('|');
-              formattedItems.push(row);
-            }
-            return `表情"${keyword}"（共${totalItems}个）\n` + formattedItems.join('\n');
-          }
-          else {
-            const { page } = options;
-            const itemsPerRow = 4;
-            const rowsPerPage = 9;
-            const pageSize = itemsPerRow * rowsPerPage;
-            const totalPages = Math.ceil(totalItems / pageSize) || 1;
-            const validPage = Math.min(Math.max(1, page), totalPages);
-            const startIdx = (validPage - 1) * pageSize;
-            const currentPageItems = emojiList.slice(startIdx, startIdx + pageSize);
-            const formattedItems = [];
-            for (let i = 0; i < currentPageItems.length; i += itemsPerRow) {
-              const row = currentPageItems.slice(i, i + itemsPerRow)
-                .map(formatEmoji).join('|');
-              formattedItems.push(row);
-            }
-            const header = `表情列表（第${validPage}/${totalPages}页）`;
-            return header + '\n' + formattedItems.join('\n');
-          }
-        } catch (error) {
-          this.logger.warn('获取表情列表失败:', error);
-          return '获取表情列表失败';
-        }
+      // 表情列表子命令
+      .subcommand('.list [page:number]', '查看支持的表情列表')
+      .action(({}, page = 1) => {
+        return this.wrapWithErrorHandling(async () => {
+          const emojiList = this.sortEmojiList(Object.entries(EMOJI_MAP));
+          return this.formatEmojiList(emojiList, page);
+        }, '获取表情列表失败');
       });
   }
 
@@ -209,24 +227,15 @@ export class Stick {
    * 发送多个随机表情
    */
   private async sendRandomFaces(session: Session, count: number, messageId: number | string): Promise<void> {
-    try {
-      if (this.numericEmojiIds.length === 0) {
-        this.logger.warn('没有可用的表情')
-        return
-      }
-      const safeCount = Math.min(
-        count,
-        20,
-        this.numericEmojiIds.length
-      )
-      const selectedEmojis = this.shuffleArray(this.numericEmojiIds).slice(0, safeCount)
-      // 依次发送表情
-      for (const id of selectedEmojis) {
-        await this.addReaction(session, messageId, id)
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-    } catch (error) {
-      this.logger.warn('表情回复操作失败:', error)
+    if (this.numericEmojiIds.length === 0) {
+      return
+    }
+    const safeCount = Math.min(count, 20, this.numericEmojiIds.length)
+    const selectedEmojis = this.shuffleArray(this.numericEmojiIds).slice(0, safeCount)
+    // 依次发送表情
+    for (const id of selectedEmojis) {
+      await this.addReaction(session, messageId, id)
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 }
