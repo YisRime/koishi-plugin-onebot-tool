@@ -48,22 +48,29 @@ export class Poke {
    * 注册戳一戳命令
    */
   registerCommand() {
-    this.ctx.command('poke [target:text]', '戳一戳')
-      .usage('戳一戳指定用户或自己')
-      .example('poke - 戳一戳自己')
-      .example('poke @用户 - 戳一戳指定用户')
-      .example('poke 123456 - 戳一戳用户123456')
-      .action(async ({ session }, target) => {
-        if (!session.onebot) return;
-
+    this.ctx.command('poke [times:number]', '戳一戳')
+      .option('user', '-u <target:string> 指定目标用户')
+      .usage('发送戳一戳，可指定次数和目标用户')
+      .example('poke 3 - 戳自己三次')
+      .example('poke 3 -u @12345 - 戳用户12345三次')
+      .action(async ({ session, options }, times = 1) => {
         try {
+          times = Math.max(1, Math.floor(Number(times)));
+          if (isNaN(times)) times = 1;
+          // 解析目标用户ID
+          const target = options.user;
           const parsedId = target ? utils.parseTarget(target) : null;
           const targetId = (!target || !parsedId) ? session.userId : parsedId;
-
-          await session.onebot._request('send_poke', {
-            user_id: targetId,
-            group_id: session.isDirect ? undefined : session.guildId
-          });
+          // 发送多次戳一戳
+          for (let i = 0; i < times; i++) {
+            await session.onebot._request('send_poke', {
+              user_id: targetId,
+              group_id: session.isDirect ? undefined : session.guildId
+            });
+            if (times > 1 && i < times - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
 
           return '';
         } catch (error) {

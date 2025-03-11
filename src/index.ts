@@ -2,7 +2,7 @@ import { Context, Schema } from 'koishi'
 import {} from "koishi-plugin-adapter-onebot";
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
-import { Reaction } from './reaction'
+import { Stick } from './stick'
 
 export const name = 'onebot-tool'
 
@@ -33,9 +33,9 @@ export interface Config {
       weight: number;
     }>
   }
-  reaction: {
+  stick: {
     enabled: boolean
-    autoReaction?: boolean
+    autoStick?: boolean
   }
 }
 
@@ -75,7 +75,7 @@ export const Config: Schema<Config> = Schema.object({
     .role('table').default([
       {
         type: 'message',
-        content: '<at id={userId}/>戳你一下',
+        content: '<at id={userId}/>你干嘛~',
         weight: 50
       },
       {
@@ -87,11 +87,11 @@ export const Config: Schema<Config> = Schema.object({
     .description('响应列表')
   }).description('戳一戳配置'),
 
-  reaction: Schema.object({
+  stick: Schema.object({
     enabled: Schema.boolean()
       .description('启用表情回复')
-      .default(true),
-    autoReaction: Schema.boolean()
+      .default(false),
+    autoStick: Schema.boolean()
       .description('启用随机表情回复')
       .default(true)
   }).description('表情回复配置')
@@ -102,16 +102,16 @@ export function apply(ctx: Context, config: Config) {
 
   const zanwo = new Zanwo(onebotCtx, config.zanwo)
   const poke = new Poke(onebotCtx, config.poke)
-  const reaction = new Reaction(onebotCtx, config.reaction)
+  const stick = new Stick(onebotCtx, config.stick)
 
   zanwo.registerCommands()
   poke.registerCommand()
-  reaction.registerCommand()
+  stick.registerCommand()
 
-  if (config.reaction.enabled) {
+  if (config.stick.enabled) {
     onebotCtx.middleware(async (session, next) => {
-      if (config.reaction.autoReaction) {
-        await reaction.processMessage(session);
+      if (config.stick.autoStick) {
+        await stick.processMessage(session);
       }
       return next();
     });

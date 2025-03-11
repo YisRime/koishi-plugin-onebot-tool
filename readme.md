@@ -2,14 +2,14 @@
 
 [![npm](https://img.shields.io/npm/v/koishi-plugin-onebot-tool?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-onebot-tool)
 
-适用于 Onebot 的小工具, 包含赞我、戳一戳等功能
+适用于 Onebot 的小工具, 包含赞我、戳一戳、表情回复等功能
 
 ## 主要功能
 
 ### 赞我功能
 
 - 用户发送"赞我"后，机器人会给该用户点赞
-- 支持设置管理员账号进行权限管理
+- 支持管理点赞列表，可添加或移除用户
 - 可配置是否开启回赞提醒功能
 - 支持每日自动点赞功能
 
@@ -19,6 +19,14 @@
 - 支持消息回复和命令执行两种响应方式
 - 可设置不同响应的触发权重
 - 防刷屏的时间间隔控制
+- 支持通过命令主动戳一戳他人
+
+### 表情回复功能
+
+- 支持自动识别消息中的表情并作出回应
+- 提供表情ID查询命令
+- 支持发送随机表情
+- 支持发送骰子、猜拳等特殊表情
 
 ## 插件配置
 
@@ -30,14 +38,19 @@ zanwo:
   autoLike: true         # 启用每日自动点赞
 
 poke:
-  interval: 1000        # 触发冷却时间(ms)
+  enabled: true          # 是否启用戳一戳功能
+  interval: 1000         # 触发冷却时间(ms)
   responses:
-    - type: 'message'   # 类型：message(消息)或command(命令)
-      content: '<at id={userId}/>戳你一下'
-      weight: 50        # 触发概率权重(0-100)
+    - type: 'message'    # 类型：message(消息)或command(命令)
+      content: '<at id={userId}/>你干嘛~'
+      weight: 50         # 触发概率权重(0-100)
     - type: 'command'
       content: 'poke'
       weight: 50
+
+stick:
+  enabled: false         # 是否启用表情回复功能
+  autoStick: true        # 是否自动回复表情
 ```
 
 ## 使用方法
