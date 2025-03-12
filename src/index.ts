@@ -34,8 +34,6 @@ export interface Config {
       weight: number;
     }>
   }
-  stick: {
-  }
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -87,10 +85,7 @@ export const Config: Schema<Config> = Schema.object({
       }
     ])
     .description('响应列表')
-  }).description('戳一戳配置'),
-
-  stick: Schema.object({
-  }).description('表情回复配置')
+  }).description('戳一戳及表情回复配置')
 })
 
 export function apply(ctx: Context, config: Config) {
