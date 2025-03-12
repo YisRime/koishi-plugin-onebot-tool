@@ -66,6 +66,7 @@ zanwo:
 poke:
   enabled: true          # 是否启用戳一戳功能
   interval: 1000         # 触发冷却时间(ms)
+  enableStick: false     # 是否启用表情回复功能
   responses:
     - type: 'message'    # 类型：message(消息)或command(命令)
       content: '<at id={userId}/>你干嘛~'
@@ -73,10 +74,6 @@ poke:
     - type: 'command'
       content: 'poke'
       weight: 50
-
-stick:
-  enabled: false         # 是否启用表情回复功能
-  autoStick: true        # 是否自动回复表情
 ```
 
 ## 使用方法

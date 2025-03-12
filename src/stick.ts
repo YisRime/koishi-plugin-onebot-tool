@@ -14,7 +14,7 @@ export class Stick {
    * @param ctx Koishi 上下文
    * @param config 表情回复配置
    */
-  constructor(private ctx: Context, private config: Config['stick']) {
+  constructor(private ctx: Context) {
     this.logger = ctx.logger('stick')
     // 预处理数字表情ID列表
     this.numericEmojiIds = Object.values(EMOJI_MAP)

@@ -27,6 +27,7 @@ export interface Config {
   poke: {
     enabled: boolean
     interval?: number
+    enableStick?: boolean
     responses?: Array<{
       type: "command" | "message";
       content: string;
@@ -34,8 +35,6 @@ export interface Config {
     }>
   }
   stick: {
-    enabled: boolean
-    autoStick?: boolean
   }
 }
 
@@ -62,6 +61,9 @@ export const Config: Schema<Config> = Schema.object({
     interval: Schema.number()
       .default(1000).min(0)
       .description('最小触发间隔（毫秒）'),
+    enableStick: Schema.boolean()
+      .description('启用表情回复')
+      .default(false),
     responses: Schema.array(Schema.object({
       type: Schema.union([
         Schema.const('command').description('执行命令'),
@@ -88,12 +90,6 @@ export const Config: Schema<Config> = Schema.object({
   }).description('戳一戳配置'),
 
   stick: Schema.object({
-    enabled: Schema.boolean()
-      .description('启用表情回复')
-      .default(false),
-    autoStick: Schema.boolean()
-      .description('启用随机表情回复')
-      .default(true)
   }).description('表情回复配置')
 })
 
@@ -102,17 +98,15 @@ export function apply(ctx: Context, config: Config) {
 
   const zanwo = new Zanwo(onebotCtx, config.zanwo)
   const poke = new Poke(onebotCtx, config.poke)
-  const stick = new Stick(onebotCtx, config.stick)
+  const stick = new Stick(onebotCtx)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
 
-  if (config.stick.enabled) {
+  if (config.poke.enableStick) {
     onebotCtx.middleware(async (session, next) => {
-      if (config.stick.autoStick) {
-        await stick.processMessage(session);
-      }
+      await stick.processMessage(session);
       return next();
     });
   }

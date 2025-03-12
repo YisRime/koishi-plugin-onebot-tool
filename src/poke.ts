@@ -57,6 +57,10 @@ export class Poke {
         try {
           times = Math.max(1, Math.floor(Number(times)));
           if (isNaN(times)) times = 1;
+          // 添加次数限制
+          if (times > 10) {
+            return '单次戳一戳不能超过10次哦~';
+          }
           // 解析目标用户ID
           const target = options.user;
           const parsedId = target ? utils.parseTarget(target) : null;
@@ -68,7 +72,7 @@ export class Poke {
               group_id: session.isDirect ? undefined : session.guildId
             });
             if (times > 1 && i < times - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
 
