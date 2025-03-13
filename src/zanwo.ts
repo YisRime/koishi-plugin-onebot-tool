@@ -175,8 +175,7 @@ export class Zanwo {
       .action(({ session }, target) => {
         if (!checkAdmin(session)) return '仅管理员可用'
         const userId = utils.parseTarget(target)
-        if (!userId) return '找不到指定用户'
-        if (!/^\d{5,10}$/.test(userId)) return '用户格式不正确'
+        if (!userId) return '找不到指定用户或格式不正确'
         return this.handleTargets('add', userId) ? `已添加 ${userId} 到点赞列表` : '添加失败'
       })
     // 从点赞列表移除
@@ -184,7 +183,7 @@ export class Zanwo {
       .action(({ session }, target) => {
         if (!checkAdmin(session)) return '仅管理员可用'
         const userId = utils.parseTarget(target)
-        if (!userId) return '找不到指定用户'
+        if (!userId) return '找不到指定用户或格式不正确'
         return this.handleTargets('remove', userId) ? `已从点赞列表移除 ${userId}` : '移除失败'
       })
     // 为指定用户点赞

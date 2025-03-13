@@ -1,5 +1,4 @@
 import { Context, h, Session } from 'koishi'
-import { Config } from './index'
 import { EMOJI_MAP, COMMON_EMOJIS } from './emojimap'
 
 /**
