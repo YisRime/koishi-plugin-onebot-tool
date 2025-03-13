@@ -132,14 +132,14 @@ export class Zanwo {
   /**
    * 向指定用户发送点赞
    */
-  async sendLike(session, userId: string, count: number = 10): Promise<boolean> {
+  async sendLike(session, userId: string, rounds: number = 5): Promise<boolean> {
     try {
       let successCount = 0;
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < rounds; i++) {
         try {
-          await session.bot.internal.sendLike(userId, 1);
+          await session.bot.internal.sendLike(userId, 10);
           successCount++;
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 200));
         } catch (err) {
         }
       }
