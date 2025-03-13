@@ -71,8 +71,9 @@ export class Zanwo {
 
   /**
    * 执行自动点赞
+   * @param {any} session - 会话对象，包含bot实例
    */
-  private async executeAutoLike(): Promise<void> {
+  private async executeAutoLike(session?): Promise<void> {
     const targets = [...this.targets]
     if (!targets.length) {
       this.logger.info('自动点赞：点赞列表为空')
@@ -84,14 +85,12 @@ export class Zanwo {
     try {
       let successCount = 0;
       for (const userId of targets) {
-        const session = { bot: this.ctx.bots.find(bot => bot.platform === 'onebot') }
-        if (!session.bot) {
-          this.logger.warn('找不到可用的机器人，跳过点赞')
-          break
+        if (!session) {
+          session = { bot: this.ctx.bots.find(bot => bot.platform === 'onebot') }
         }
         const success = await this.sendLike(session, userId);
         if (success) successCount++;
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       this.logger.info(`自动点赞完成：成功 ${successCount}/${targets.length} 人`)
@@ -139,7 +138,6 @@ export class Zanwo {
         try {
           await session.bot.internal.sendLike(userId, 10);
           successCount++;
-          await new Promise(resolve => setTimeout(resolve, 200));
         } catch (err) {
         }
       }
@@ -206,7 +204,7 @@ export class Zanwo {
     zanwo.subcommand('.all', { authority: 2 })
       .action(async ({ session }) => {
         if (!checkAdmin(session)) return '仅管理员可用'
-        this.executeAutoLike();
+        this.executeAutoLike(session);
         return '已开始执行点赞任务'
       })
   }
