@@ -28,6 +28,8 @@ export interface Config {
     enabled: boolean
     interval?: number
     enableStick?: boolean
+    maxTimes?: number
+    actionInterval?: number
     responses?: Array<{
       type: "command" | "message";
       content: string;
@@ -58,10 +60,13 @@ export const Config: Schema<Config> = Schema.object({
       .default(true),
     interval: Schema.number()
       .default(1000).min(0)
-      .description('最小触发间隔（毫秒）'),
-    enableStick: Schema.boolean()
-      .description('启用表情回复')
-      .default(false),
+      .description('最小响应间隔（毫秒）'),
+    maxTimes: Schema.number()
+      .default(5).min(1).max(200)
+      .description('单次戳一戳请求最大次数'),
+    actionInterval: Schema.number()
+      .default(500).min(100)
+      .description('请求多次戳一戳之间间隔（毫秒）'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
         Schema.const('command').description('执行命令'),
@@ -84,7 +89,10 @@ export const Config: Schema<Config> = Schema.object({
         weight: 50
       }
     ])
-    .description('响应列表')
+    .description('响应列表'),
+    enableStick: Schema.boolean()
+      .description('启用自动表情回复')
+      .default(false)
   }).description('戳一戳及表情回复配置')
 })
 

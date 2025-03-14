@@ -48,31 +48,37 @@ export class Poke {
    * 注册戳一戳命令
    */
   registerCommand() {
-    this.ctx.command('poke [times:number]', '戳一戳')
-      .option('user', '-u <target:string> 指定目标用户')
+    this.ctx.command('poke [times:number] [target:string]', '戳一戳')
       .usage('发送戳一戳，可指定次数和目标用户')
       .example('poke 3 - 戳自己三次')
-      .example('poke 3 -u @12345 - 戳用户12345三次')
-      .action(async ({ session, options }, times = 1) => {
+      .example('poke @12345 - 戳用户@12345一次')
+      .example('poke 3 @12345 - 戳用户@12345三次')
+      .action(async ({ session }, times, target) => {
         try {
+          if (typeof times === 'string' && !target) {
+            target = times;
+            times = 1;
+          }
+
           times = Math.max(1, Math.floor(Number(times)));
           if (isNaN(times)) times = 1;
-          // 添加次数限制
-          if (times > 10) {
-            return '单次戳一戳不能超过10次哦~';
+
+          const maxTimes = this.config.maxTimes;
+          if (times > maxTimes) {
+            return `单次戳一戳请求不能超过${maxTimes}次哦~`;
           }
           // 解析目标用户ID
-          const target = options.user;
           const parsedId = target ? utils.parseTarget(target) : null;
           const targetId = (!target || !parsedId) ? session.userId : parsedId;
-          // 发送多次戳一戳
+
+          const actionInterval = this.config.actionInterval;
           for (let i = 0; i < times; i++) {
             await session.onebot._request('send_poke', {
               user_id: targetId,
               group_id: session.isDirect ? undefined : session.guildId
             });
             if (times > 1 && i < times - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, actionInterval));
             }
           }
 
