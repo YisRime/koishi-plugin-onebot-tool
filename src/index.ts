@@ -97,25 +97,24 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export function apply(ctx: Context, config: Config) {
-  const onebotCtx = ctx.platform('onebot')
 
-  const zanwo = new Zanwo(onebotCtx, config.zanwo)
-  const poke = new Poke(onebotCtx, config.poke)
-  const stick = new Stick(onebotCtx)
+  const zanwo = new Zanwo(ctx, config.zanwo)
+  const poke = new Poke(ctx, config.poke)
+  const stick = new Stick(ctx)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
 
   if (config.poke.enableStick) {
-    onebotCtx.middleware(async (session, next) => {
+    ctx.middleware(async (session, next) => {
       await stick.processMessage(session);
       return next();
     });
   }
 
   if (config.poke.enabled) {
-    onebotCtx.on('notice', async (session) => {
+    ctx.on('notice', async (session) => {
       await poke.processNotice(session);
     });
   }

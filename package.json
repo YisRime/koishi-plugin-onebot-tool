@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-onebot-tool",
   "description": "适用于 Onebot 的小工具, 包含赞我、戳一戳、表情回复等功能",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
   ],
@@ -29,9 +29,10 @@
     "stick",
     "reaction"
   ],
-  "devDependencies": {},
-  "peerDependencies": {
-    "koishi": "^4.18.7",
+  "devDependencies": {
     "koishi-plugin-adapter-onebot": "^6.0.0"
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.7"
   }
 }
