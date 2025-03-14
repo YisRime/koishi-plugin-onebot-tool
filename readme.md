@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/koishi-plugin-onebot-tool?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-onebot-tool)
 
-适用于 Onebot 的小工具, 包含赞我、戳一戳、表情回复等功能
+适用于 Onebot 的 QQ 工具集，提供自动点赞、个性化戳一戳响应和丰富的表情回复功能
 
 ## 主要功能
 
