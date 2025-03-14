@@ -160,7 +160,7 @@ export class Zanwo {
       .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表')
       .action(async ({ session }) => {
         const success = await this.sendLike(session, session.userId)
-        const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败')
+        const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败，请尝试添加好友')
         await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
     // 查看点赞列表
@@ -196,7 +196,7 @@ export class Zanwo {
           return
         }
         const success = await this.sendLike(session, userId)
-        const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败')
+        const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败，请尝试添加好友')
         await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
     // 执行手动点赞
