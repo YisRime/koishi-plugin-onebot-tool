@@ -67,13 +67,6 @@ export class Stick {
   }
 
   /**
-   * 获取目标消息ID
-   */
-  private getTargetMessageId(session: Session): string | number {
-    return session.quote?.messageId || session.messageId
-  }
-
-  /**
    * 错误处理包装器
    * @param fn 需要执行的异步函数
    * @param defaultValue 发生错误时返回的默认值
@@ -140,18 +133,22 @@ export class Stick {
       .example('stick 赞,踩 - 使用表情名称回复')
       .action(({ session }, faceId) => {
         return this.wrapWithErrorHandling(async () => {
-          const targetMessageId = this.getTargetMessageId(session);
+          const targetMessageId = session.quote?.messageId || session.messageId;
           if (!faceId) {
             return this.addReaction(session, targetMessageId, "76");
           }
           // 处理多个表情ID
           if (faceId.includes(',')) {
             const parts = faceId.split(',').map(part => part.trim());
-            const validFaceIds = parts
+            let validFaceIds = parts
               .map(part => this.resolveEmojiId(part))
               .filter(Boolean) as string[];
             if (validFaceIds.length === 0) {
               return this.addReaction(session, targetMessageId, "76");
+            }
+            // 限制表情数量
+            if (validFaceIds.length > 20) {
+              validFaceIds = validFaceIds.slice(0, 20);
             }
             // 依次发送表情
             for (const id of validFaceIds) {
@@ -167,10 +164,13 @@ export class Stick {
       });
 
     // 随机表情子命令
-    stick.subcommand('.random [count:number]', '回复随机表情', { authority: 2 })
-      .action(({ session }, count = 20) => {
+    stick.subcommand('.random [count:number]', '回复随机表情')
+      .action(({ session }, count = 1) => {
         return this.wrapWithErrorHandling(async () => {
-          const targetMessageId = this.getTargetMessageId(session);
+          const targetMessageId = session.quote?.messageId || session.messageId;
+          if (count > 20) {
+            count = 20;
+          }
           return this.sendRandomFaces(session, count, targetMessageId);
         }, undefined);
       });
