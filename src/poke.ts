@@ -18,6 +18,7 @@ interface PokeResponse {
 export class Poke {
   private cache = new Map<string, number>();
   private totalWeight: number = 0;
+  private commandCooldown = new Map<string, number>();
 
   /**
    * 创建戳一戳处理器
@@ -42,6 +43,7 @@ export class Poke {
    */
   dispose() {
     this.cache.clear();
+    this.commandCooldown.clear();
   }
 
   /**
@@ -55,6 +57,22 @@ export class Poke {
       .example('poke 3 @12345 - 戳用户@12345三次')
       .action(async ({ session }, times, target) => {
         try {
+          // 检查命令冷却时间
+          const cdTime = this.config.cdTime * 1000;
+          const now = Date.now();
+          if (cdTime > 0) {
+            const userId = session.userId;
+            const lastUsed = this.commandCooldown.get(userId) || 0;
+            const cooldownRemaining = lastUsed + cdTime - now;
+
+            if (cooldownRemaining > 0) {
+              const seconds = Math.ceil(cooldownRemaining / 1000);
+              const msgId = await session.send(`请等待${seconds}秒后再戳一戳哦~`);
+              utils.autoRecall(session, Array.isArray(msgId) ? msgId[0] : msgId);
+              return;
+            }
+          }
+
           if (typeof times === 'string' && !target) {
             target = times;
             times = 1;
@@ -65,7 +83,9 @@ export class Poke {
 
           const maxTimes = this.config.maxTimes;
           if (times > maxTimes) {
-            return `单次戳一戳请求不能超过${maxTimes}次哦~`;
+            const msgId = await session.send(`单次戳一戳请求不能超过${maxTimes}次哦~`);
+            utils.autoRecall(session, Array.isArray(msgId) ? msgId[0] : msgId);
+            return;
           }
           // 解析目标用户ID
           const parsedId = target ? utils.parseTarget(target) : null;
@@ -80,6 +100,10 @@ export class Poke {
             if (times > 1 && i < times - 1) {
               await new Promise(resolve => setTimeout(resolve, actionInterval));
             }
+          }
+          // 更新用户的命令使用时间
+          if (this.config.cdTime > 0) {
+            this.commandCooldown.set(session.userId, now);
           }
 
           return '';

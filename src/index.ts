@@ -30,6 +30,7 @@ export interface Config {
     enableStick?: boolean
     maxTimes?: number
     actionInterval?: number
+    cdTime?: number
     responses?: Array<{
       type: "command" | "message";
       content: string;
@@ -55,18 +56,21 @@ export const Config: Schema<Config> = Schema.object({
   }).description('点赞配置'),
 
   poke: Schema.object({
+    cdTime: Schema.number()
+      .default(10).min(0)
+      .description('命令冷却时间（秒）'),
+    maxTimes: Schema.number()
+      .default(3).min(1).max(200)
+      .description('单次命令最大次数'),
+    actionInterval: Schema.number()
+      .default(500).min(100)
+      .description('多次戳一戳间隔（毫秒）'),
     enabled: Schema.boolean()
       .description('启用戳一戳响应')
       .default(true),
     interval: Schema.number()
       .default(1000).min(0)
       .description('最小响应间隔（毫秒）'),
-    maxTimes: Schema.number()
-      .default(5).min(1).max(200)
-      .description('单次戳一戳请求最大次数'),
-    actionInterval: Schema.number()
-      .default(500).min(100)
-      .description('请求多次戳一戳之间间隔（毫秒）'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
         Schema.const('command').description('执行命令'),
