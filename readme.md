@@ -67,7 +67,8 @@ zanwo:
 poke:
   enabled: true          # 是否启用戳一戳功能
   interval: 1000         # 触发冷却时间(ms)，设置为0关闭限制
-  maxTimes: 5            # 单次戳一戳请求最大次数(1-200)
+  cdTime: 10             # 命令冷却时间(秒)，设置为0关闭限制
+  maxTimes: 3            # 单次戳一戳请求最大次数(1-200)
   actionInterval: 500    # 请求多次戳一戳之间的间隔(ms)
   enableStick: false     # 是否启用表情回复功能
   responses:
