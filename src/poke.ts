@@ -2,6 +2,12 @@ import { Context, h, Session } from "koishi";
 import { Config } from "./index";
 import { utils } from "./utils";
 
+declare module 'koishi' {
+  interface Session {
+    _responseTriggered?: boolean;
+  }
+}
+
 /**
  * 定义戳一戳响应的结构
  * @interface PokeResponse
@@ -60,11 +66,12 @@ export class Poke {
           // 检查命令冷却时间
           const cdTime = this.config.cdTime * 1000;
           const now = Date.now();
-          if (cdTime > 0) {
+          // 检查是否是响应触发的命令，如果不是才检查cdTime
+          const isResponseTriggered = session._responseTriggered === true;
+          if (cdTime > 0 && !isResponseTriggered) {
             const userId = session.userId;
             const lastUsed = this.commandCooldown.get(userId) || 0;
             const cooldownRemaining = lastUsed + cdTime - now;
-
             if (cooldownRemaining > 0) {
               const seconds = Math.ceil(cooldownRemaining / 1000);
               const msgId = await session.send(`请等待${seconds}秒后再戳一戳哦~`);
@@ -72,15 +79,12 @@ export class Poke {
               return;
             }
           }
-
           if (typeof times === 'string' && !target) {
             target = times;
             times = 1;
           }
-
           times = Math.max(1, Math.floor(Number(times)));
           if (isNaN(times)) times = 1;
-
           const maxTimes = this.config.maxTimes;
           if (times > maxTimes) {
             const msgId = await session.send(`单次戳一戳请求不能超过${maxTimes}次哦~`);
@@ -90,7 +94,6 @@ export class Poke {
           // 解析目标用户ID
           const parsedId = target ? utils.parseTarget(target) : null;
           const targetId = (!target || !parsedId) ? session.userId : parsedId;
-
           const actionInterval = this.config.actionInterval;
           for (let i = 0; i < times; i++) {
             await session.onebot._request('send_poke', {
@@ -102,10 +105,9 @@ export class Poke {
             }
           }
           // 更新用户的命令使用时间
-          if (this.config.cdTime > 0) {
+          if (this.config.cdTime > 0 && !isResponseTriggered) {
             this.commandCooldown.set(session.userId, now);
           }
-
           return '';
         } catch (error) {
           this.ctx.logger('poke').warn('戳一戳失败:', error);
@@ -122,7 +124,6 @@ export class Poke {
     if (session.subtype !== "poke" || session.targetId !== session.selfId) {
       return false;
     }
-
     if (this.config?.interval > 0) {
       const lastTime = this.cache.get(session.userId);
       if (lastTime && (session.timestamp - lastTime < this.config.interval)) {
@@ -130,14 +131,15 @@ export class Poke {
       }
       this.cache.set(session.userId, session.timestamp);
     }
-
     if (!this.config?.responses?.length) return false;
     const response = this.randomResponse();
     if (!response) return false;
-
     try {
       if (response.type === "command") {
+        // 标记这个会话是由响应触发的
+        session._responseTriggered = true;
         await session.execute(response.content);
+        delete session._responseTriggered;
       } else {
         await session.sendQueued(h.parse(response.content, session));
       }
@@ -154,16 +156,13 @@ export class Poke {
    */
   private randomResponse(): PokeResponse {
     if (!this.config?.responses?.length) return null;
-
     const responses = this.config.responses;
     const random = Math.random() * this.totalWeight;
     let sum = 0;
-
     for (const response of responses) {
       sum += response.weight;
       if (random < sum) return response;
     }
-
     return responses[0];
   }
 }
