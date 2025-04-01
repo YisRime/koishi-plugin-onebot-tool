@@ -27,6 +27,13 @@
 - 提供表情ID查询命令
 - 支持发送随机表情
 
+### OneBot管理工具
+
+- 提供丰富的信息查询功能，包括消息、图片、语音、合并转发等内容
+- 支持查询账号信息、群组信息、成员信息等
+- 提供OneBot实现重启、缓存清理等管理功能
+- 支持获取运行状态和版本信息
+
 ## 命令说明
 
 ### 赞我
@@ -34,6 +41,7 @@
 - `zanwo` / `赞我` - 为自己点赞
 - `zanwo.user @用户` - 为指定用户点赞
 - `zanwo.list` - 查看当前点赞列表中的用户
+- `zanwo.clear` - 清空点赞列表中的用户
 - `zanwo.add @用户` - 添加指定用户到点赞列表
 - `zanwo.remove @用户` - 从点赞列表移除指定用户
 - `zanwo.all` - 立即执行对列表中所有用户的点赞
@@ -54,6 +62,26 @@
 - `stick.search [关键词]` - 搜索包含关键词的表情
   - 例如：`stick.search 龙` - 搜索包含"龙"的表情
     - `stick.search.list [页码]` - 查看支持的表情列表，分页显示
+
+### 测试命令
+
+- `restart` - 重启OneBot
+- `clean` - 清理缓存
+- `get` - 获取消息内容
+  - `get.forward` - 获取合并转发内容
+  - `get.record` - 获取语音文件
+  - `get.image` - 获取图片文件
+  - `get.stat` - 获取运行状态
+  - `get.ver` - 获取版本信息
+  - `get.csrf` - 获取相关接口凭证
+- `info` - 查询本账号信息
+  - `info.user` - 查询账号信息
+  - `info.friend` - 获取本账号好友列表
+  - `info.group` - 获取本账号群组列表
+- `group` - 查询群信息
+  - `group.user` - 查询群成员信息
+  - `group.list` - 获取群成员列表
+  - `group.honor` - 查询群荣誉信息
 
 ## 插件配置
 
@@ -78,6 +106,9 @@ poke:
     - type: 'command'
       content: 'poke'
       weight: 50
+
+admin:
+  enabled: true          # 是否启用测试命令
 ```
 
 ## 使用方法

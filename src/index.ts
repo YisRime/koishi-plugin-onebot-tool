@@ -21,7 +21,6 @@ declare module "koishi" {
 export interface Config {
   zanwo: {
     adminAccount: string
-    adminOnly: boolean
     enableNotify: boolean
     autoLike: boolean
   }
@@ -51,9 +50,6 @@ export const Config: Schema<Config> = Schema.object({
     enableNotify: Schema.boolean()
       .description('开启回赞提醒')
       .default(false),
-    adminOnly: Schema.boolean()
-      .description('仅管理员可配置列表')
-      .default(true),
     autoLike: Schema.boolean()
       .description('开启自动批量点赞')
       .default(true),

@@ -60,7 +60,7 @@ export class Zanwo {
       clearInterval(this.timer)
     }
 
-    if (!this.config.autoLike) {
+    if (!this.config.autoLike || this.targets.size === 0) {
       return
     }
 
@@ -113,8 +113,14 @@ export class Zanwo {
   /**
    * 处理点赞目标列表
    */
-  handleTargets(action: 'add' | 'remove' | 'get', userId?: string): boolean | string[] {
+  handleTargets(action: 'add' | 'remove' | 'get' | 'clear', userId?: string): boolean | string[] {
     if (action === 'get') return [...this.targets];
+    if (action === 'clear') {
+      const size = this.targets.size;
+      this.targets.clear();
+      this.saveTargets();
+      return size > 0;
+    }
     if (!userId || !/^\d+$/.test(userId)) return false;
 
     if (action === 'add') {
@@ -151,43 +157,39 @@ export class Zanwo {
    * 设置点赞相关命令
    */
   registerCommands(): void {
-    const { adminAccount, adminOnly, enableNotify } = this.config
+    const { adminAccount, enableNotify } = this.config
     const notifyText = enableNotify ? adminAccount : ''
-    const checkAdmin = (session) => !adminOnly || session.userId === adminAccount
 
     const zanwo = this.ctx.command('zanwo', '自动点赞')
       .alias('赞我')
-      .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表')
+      .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表\nzanwo.clear - 清空点赞列表')
       .action(async ({ session }) => {
         const success = await this.sendLike(session, session.userId)
         const message = await session.send(success ? `点赞完成，记得回赞${notifyText}哦~` : '点赞失败，请尝试添加好友')
         await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
     // 查看点赞列表
-    zanwo.subcommand('.list', { authority: 2 })
-      .action(({ session }) => {
-        if (!checkAdmin(session)) return '仅管理员可用'
+    zanwo.subcommand('.list', { authority: 3 })
+      .action(({}) => {
         const targets = this.handleTargets('get') as string[]
         return targets.length ? `当前点赞列表（共${targets.length}人）：${targets.join(', ')}` : '点赞列表为空'
       })
     // 添加到点赞列表
-    zanwo.subcommand('.add <target:text>')
-      .action(({ session }, target) => {
-        if (!checkAdmin(session)) return '仅管理员可用'
+    zanwo.subcommand('.add <target:text>', { authority: 2 })
+      .action(({}, target) => {
         const userId = utils.parseTarget(target)
         if (!userId) return '找不到指定用户或格式不正确'
         return this.handleTargets('add', userId) ? `已添加 ${userId} 到点赞列表` : '添加失败'
       })
     // 从点赞列表移除
-    zanwo.subcommand('.remove <target:text>')
-      .action(({ session }, target) => {
-        if (!checkAdmin(session)) return '仅管理员可用'
+    zanwo.subcommand('.remove <target:text>', { authority: 2 })
+      .action(({}, target) => {
         const userId = utils.parseTarget(target)
         if (!userId) return '找不到指定用户或格式不正确'
         return this.handleTargets('remove', userId) ? `已从点赞列表移除 ${userId}` : '移除失败'
       })
     // 为指定用户点赞
-    zanwo.subcommand('.user <target:text>', { authority: 2 })
+    zanwo.subcommand('.user <target:text>')
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
         if (!userId || userId === session.userId) {
@@ -200,11 +202,16 @@ export class Zanwo {
         await utils.autoRecall(session, Array.isArray(message) ? message[0] : message)
       })
     // 执行手动点赞
-    zanwo.subcommand('.all', { authority: 2 })
+    zanwo.subcommand('.all', { authority: 3 })
       .action(async ({ session }) => {
-        if (!checkAdmin(session)) return '仅管理员可用'
         this.executeAutoLike(session);
         return '已开始执行点赞任务'
+      })
+    // 清空点赞列表
+    zanwo.subcommand('.clear', { authority: 4 })
+      .action(({}) => {
+        const result = this.handleTargets('clear')
+        return result ? '已清空点赞列表' : '点赞列表已经为空'
       })
   }
 

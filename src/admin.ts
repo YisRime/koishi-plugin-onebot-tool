@@ -62,7 +62,7 @@ export class Admin {
           return `获取失败: ${e.message}`
         }
       })
-    get.subcommand('.record', '获取语音文件', { authority: 3 })
+    get.subcommand('.record', '获取语音文件')
       .usage('获取指定语音文件并转换格式')
       .option('file', '-f <file:string> 文件名', { type: 'string' })
       .option('format', '-t <format:string> 转换格式 (mp3/amr/wma/m4a/spx/ogg/wav/flac)', { fallback: 'mp3' })
@@ -104,7 +104,7 @@ export class Admin {
           return `获取语音失败: ${e.message}`
         }
       })
-    get.subcommand('.image', '获取图片文件', { authority: 3 })
+    get.subcommand('.image', '获取图片文件')
       .usage('获取指定图片文件的本地路径')
       .option('file', '-f <file:string> 文件名', { type: 'string' })
       .action(async ({ session, options }) => {
@@ -167,7 +167,7 @@ export class Admin {
           return `获取失败: ${e.message}`
         }
       })
-    get.subcommand('.ver', '获取版本信息', { authority: 3 })
+    get.subcommand('.ver', '获取版本信息')
       .usage('获取版本信息')
       .action(async ({ session }) => {
         try {
