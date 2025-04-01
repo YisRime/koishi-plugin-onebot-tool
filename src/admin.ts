@@ -1,4 +1,5 @@
 import { Context } from 'koishi'
+import { utils } from './utils'
 
 export class Admin {
   constructor(private ctx: Context) {}
@@ -14,7 +15,9 @@ export class Admin {
           await session.onebot.setRestart(2000)
           return '正在重启 OneBot，请稍候...'
         } catch (e) {
-          return `重启失败: ${e.message}`
+          const msg = await session.send(`重启失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     this.ctx.command('clean', '清理缓存', { authority: 4 })
@@ -24,7 +27,9 @@ export class Admin {
           await session.onebot.cleanCache()
           return '清理缓存成功'
         } catch (e) {
-          return `清理缓存失败: ${e.message}`
+          const msg = await session.send(`清理缓存失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
 
@@ -42,7 +47,9 @@ export class Admin {
           const msg = await session.onebot.getMsg(messageId)
           return JSON.stringify(msg, null, 2)
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.forward', '获取合并转发内容')
@@ -59,7 +66,9 @@ export class Admin {
           const msg = await session.onebot.getForwardMsg(messageId)
           return JSON.stringify(msg, null, 2)
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.record', '获取语音文件')
@@ -91,17 +100,23 @@ export class Admin {
               }
             }
           } catch (e) {
-            return `解析引用消息失败: ${e.message}`
+            const msg = await session.send(`解析引用消息失败: ${e.message}`)
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
         }
         if (!fileName) {
-          return '未发现语音文件'
+          const msg = await session.send('未发现语音文件')
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
         try {
           const result = await session.onebot.getRecord(fileName, options.format as 'mp3' | 'amr' | 'wma' | 'm4a' | 'spx' | 'ogg' | 'wav' | 'flac')
           return `语音文件路径: ${result.file}`
         } catch (e) {
-          return `获取语音失败: ${e.message}`
+          const msg = await session.send(`获取语音失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.image', '获取图片文件')
@@ -138,17 +153,23 @@ export class Admin {
               }
             }
           } catch (e) {
-            return `解析引用消息失败: ${e.message}`
+            const msg = await session.send(`解析引用消息失败: ${e.message}`)
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
         }
         if (!fileName) {
-          return '未发现图片文件'
+          const msg = await session.send('未发现图片文件')
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
         try {
           const result = await session.onebot.getImage(fileName)
           return `图片文件路径: ${result.file}`
         } catch (e) {
-          return `获取图片失败: ${e.message}`
+          const msg = await session.send(`获取图片失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.stat', '获取运行状态')
@@ -164,7 +185,9 @@ export class Admin {
           }
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.ver', '获取版本信息')
@@ -182,7 +205,9 @@ export class Admin {
           }
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     get.subcommand('.csrf [domain:string]', '获取相关接口凭证', { authority: 4 })
@@ -195,7 +220,9 @@ export class Admin {
           result += `Cookies: ${credentials.cookies}`
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
 
@@ -206,7 +233,9 @@ export class Admin {
           const info = await session.onebot.getLoginInfo()
           return `账号信息:\n${info.nickname}(${info.user_id})`
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     info.subcommand('.user <user_id:number>', '查询账号信息')
@@ -214,13 +243,17 @@ export class Admin {
       .option('no-cache', '-n 不使用缓存', { fallback: false })
       .action(async ({ session, options }, user_id) => {
         if (!user_id) {
-          return '请提供QQ'
+          const msg = await session.send('请提供QQ')
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
         try {
           const info = await session.onebot.getStrangerInfo(user_id, options['no-cache'])
           return `账号信息:\n${info.nickname}(${info.user_id})\n${info.age} | ${info.sex}`
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     info.subcommand('.friend', '获取本账号好友列表', { authority: 3 })
@@ -234,7 +267,9 @@ export class Admin {
           })
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     info.subcommand('.group', '获取本账号群组列表', { authority: 3 })
@@ -248,7 +283,9 @@ export class Admin {
           })
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
 
@@ -258,7 +295,9 @@ export class Admin {
       .action(async ({ session, options }, group_id) => {
         if (!group_id) {
           if (!session.guildId) {
-            return '请提供群号'
+            const msg = await session.send('请提供群号')
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
           group_id = parseInt(session.guildId)
         }
@@ -266,7 +305,9 @@ export class Admin {
           const info = await session.onebot.getGroupInfo(group_id, options['no-cache'])
           return `群信息: \n${info.group_name}(${info.group_id}) [${info.member_count}/${info.max_member_count}]`
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     group.subcommand('.user <user_id:number> [group_id:number]', '查询群成员信息')
@@ -274,11 +315,15 @@ export class Admin {
       .option('no-cache', '-n 不使用缓存', { fallback: false })
       .action(async ({ session, options }, user_id, group_id) => {
         if (!user_id) {
-          return '请提供QQ号'
+          const msg = await session.send('请提供QQ号')
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
         if (!group_id) {
           if (!session.guildId) {
-            return '请提供群号'
+            const msg = await session.send('请提供群号')
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
           group_id = parseInt(session.guildId)
         }
@@ -294,7 +339,9 @@ export class Admin {
           }
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     group.subcommand('.list [group_id:number]', '获取群成员列表')
@@ -302,7 +349,9 @@ export class Admin {
       .action(async ({ session }, group_id) => {
         if (!group_id) {
           if (!session.guildId) {
-            return '请提供群号'
+            const msg = await session.send('请提供群号')
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
           group_id = parseInt(session.guildId)
         }
@@ -322,7 +371,9 @@ export class Admin {
           })
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
     group.subcommand('.honor [group_id:number]', '查询群荣誉信息')
@@ -331,7 +382,9 @@ export class Admin {
       .action(async ({ session, options }, group_id) => {
         if (!group_id) {
           if (!session.guildId) {
-            return '请提供群号'
+            const msg = await session.send('请提供群号')
+            utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+            return
           }
           group_id = parseInt(session.guildId)
         }
@@ -361,7 +414,9 @@ export class Admin {
           }
           return result
         } catch (e) {
-          return `获取失败: ${e.message}`
+          const msg = await session.send(`获取失败: ${e.message}`)
+          utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
+          return
         }
       })
   }
