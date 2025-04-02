@@ -8,7 +8,9 @@ export class Admin {
    * 注册命令
    */
   registerCommands() {
-    this.ctx.command('restart', '重启OneBot', { authority: 5 })
+    const admin = this.ctx.command('onebot', 'OneBot 测试工具')
+
+    admin.subcommand('.restart', '重启 OneBot', { authority: 5 })
       .usage('重启 OneBot 实现和 API 服务')
       .action(async ({ session }) => {
         try {
@@ -20,7 +22,7 @@ export class Admin {
           return
         }
       })
-    this.ctx.command('clean', '清理缓存', { authority: 4 })
+    admin.subcommand('.clean', '清理缓存', { authority: 4 })
       .usage('清理积攒的缓存文件')
       .action(async ({ session }) => {
         try {
@@ -33,7 +35,7 @@ export class Admin {
         }
       })
 
-    const get = this.ctx.command('get', '获取消息内容')
+    const get = admin.subcommand('get', '获取消息内容及状态')
       .usage('获取指定ID消息的完整内容')
       .option('id', '-i <id:string> 消息ID')
       .action(async ({ session, options }) => {
@@ -226,7 +228,7 @@ export class Admin {
         }
       })
 
-    const info = get.subcommand('info', '查询本账号信息')
+    const info = admin.subcommand('info', '查询账号信息')
       .usage('查询当前账号的基本信息')
       .action(async ({ session }) => {
         try {
@@ -238,7 +240,7 @@ export class Admin {
           return
         }
       })
-    info.subcommand('.user <user_id:number>', '查询账号信息')
+    info.subcommand('.user <user_id:number>', '查询其它账号信息')
       .usage('查询指定账号的基本信息')
       .option('no-cache', '-n 不使用缓存', { fallback: false })
       .action(async ({ session, options }, user_id) => {
@@ -289,7 +291,7 @@ export class Admin {
         }
       })
 
-    const group = get.subcommand('group [group_id:number]', '查询群信息')
+    const group = admin.subcommand('group [group_id:number]', '查询群信息')
       .usage('查询指定群的基本信息')
       .option('no-cache', '-n 不使用缓存', { fallback: false })
       .action(async ({ session, options }, group_id) => {

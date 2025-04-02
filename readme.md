@@ -65,8 +65,9 @@
 
 ### 测试命令
 
-- `restart` - 重启OneBot
-- `clean` - 清理缓存
+- `onebot` - OneBot 测试工具
+  - `onebot.restart` - 重启OneBot
+  - `onebot.clean` - 清理缓存
 - `get` - 获取消息内容
   - `get.forward` - 获取合并转发内容
   - `get.record` - 获取语音文件
