@@ -3,7 +3,6 @@ import {} from "koishi-plugin-adapter-onebot";
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
 import { Stick } from './stick'
-import { Admin } from './admin'
 
 export const name = 'onebot-tool'
 
@@ -36,9 +35,6 @@ export interface Config {
       content: string;
       weight: number;
     }>
-  }
-  admin: {
-    enabled: boolean
   }
 }
 
@@ -97,13 +93,7 @@ export const Config: Schema<Config> = Schema.object({
     enableStick: Schema.boolean()
       .description('启用自动表情回复')
       .default(false)
-  }).description('戳一戳及表情回复配置'),
-
-  admin: Schema.object({
-    enabled: Schema.boolean()
-      .description('启用测试命令')
-      .default(false)
-  }).description('工具配置')
+  }).description('戳一戳及表情回复配置')
 })
 
 export function apply(ctx: Context, config: Config) {
@@ -111,15 +101,10 @@ export function apply(ctx: Context, config: Config) {
   const zanwo = new Zanwo(ctx, config.zanwo)
   const poke = new Poke(ctx, config.poke)
   const stick = new Stick(ctx)
-  const admin = new Admin(ctx)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
-
-  if (config.admin.enabled) {
-    admin.registerCommands()
-  }
 
   if (config.poke.enableStick) {
     ctx.middleware(async (session, next) => {
