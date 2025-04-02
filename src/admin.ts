@@ -9,6 +9,7 @@ interface OneBotUserInfo {
   user_id: number             // 用户ID (与uin基本一致)
   nickname?: string           // 昵称 (与nick基本一致)
   qid?: string                // QQ靓号/ID
+  remark?: string             // 备注
   longNick?: string           // 个性签名
   long_nick?: string          // 个性签名 (标准格式)
   // 个人信息
@@ -18,7 +19,7 @@ interface OneBotUserInfo {
   birthday_month?: number     // 出生月
   birthday_day?: number       // 出生日
   age?: number                // 年龄
-  seex?: string               // 性别
+  sex?: string               // 性别
   kBloodType?: number         // 血型
   homeTown?: string           // 家乡 (格式: 省-市-区)
   country?: string            // 国家
@@ -27,11 +28,14 @@ interface OneBotUserInfo {
   pos?: string                // 职位
   college?: string            // 学校/院校
   eMail?: string              // 电子邮件
+  email?: string              // 电子邮件 (标准格式)
   phoneNum?: string           // 电话号码
+  phone_num?: string          // 电话号码 (标准格式)
   // 账号信息
   regTime?: number            // 注册时间戳
   reg_time?: number           // 注册时间戳 (标准格式)
   qqLevel?: number            // QQ等级
+  level?: number              // 等级
   login_days?: number         // 登录天数
   is_vip?: boolean            // 是否为VIP
   is_years_vip?: boolean      // 是否为年费VIP
@@ -43,6 +47,14 @@ interface OneBotUserInfo {
   netType?: number            // 网络类型 (0=未知/1=WiFi/2=流量/...)
   eNetworkType?: number       // 网络类型扩展
   termDesc?: string           // 终端描述
+}
+
+interface OneBotGroupInfo {
+  group_id: number           // 群号
+  group_name: string         // 群名称
+  group_remark: string       // 群备注
+  member_count: number       // 当前成员数量
+  max_member_count: number   // 最大成员数量
 }
 
 export class Admin {
@@ -304,7 +316,7 @@ export class Admin {
           // 个人信息
           const personalInfo = []
           if (info.age) personalInfo.push(`年龄: ${info.age}岁`)
-          if (info.seex) personalInfo.push(`性别: ${info.seex}`)
+          if (info.sex) personalInfo.push(`性别: ${info.sex}`)
           if (info.birthday_year && info.birthday_month && info.birthday_day) {
             personalInfo.push(`生日: ${info.birthday_year}-${info.birthday_month}-${info.birthday_day}`)
           }
@@ -415,10 +427,36 @@ export class Admin {
       .usage('获取本账号的完整好友列表及备注')
       .action(async ({ session }) => {
         try {
-          const friends = await session.onebot.getFriendList()
+          const friends = await session.onebot.getFriendList() as OneBotUserInfo[]
           let result = `好友数量: ${friends.length}\n`
-          friends.slice(0, 20).forEach((friend) => {
-            result += `${friend.nickname}(${friend.user_id}) | ${friend.remark}\n`
+          friends.slice(0, 10).forEach((friend) => {
+            result += `${friend.nickname}(${friend.user_id})`
+            if (friend.level) result += ` | 等级: ${friend.level}`
+            result += '\n'
+            const personalInfo = []
+            if (friend.remark && friend.remark.trim()) personalInfo.push(`备注: ${friend.remark}`)
+            if (friend.sex && friend.sex !== 'unknown') personalInfo.push(`性别: ${friend.sex}`)
+            if (friend.age && friend.age > 0) personalInfo.push(`年龄: ${friend.age}岁`)
+            const hasBirthday = (friend.birthday_year && friend.birthday_year > 0) ||
+                               (friend.birthday_month && friend.birthday_month > 0) ||
+                               (friend.birthday_day && friend.birthday_day > 0)
+            if (hasBirthday) {
+              const year = friend.birthday_year && friend.birthday_year > 0 ? friend.birthday_year : '?'
+              const month = friend.birthday_month && friend.birthday_month > 0 ? friend.birthday_month : '?'
+              const day = friend.birthday_day && friend.birthday_day > 0 ? friend.birthday_day : '?'
+              personalInfo.push(`生日: ${year}-${month}-${day}`)
+            }
+            if (personalInfo.length > 0) {
+              result += `  ${personalInfo.join(' | ')}\n`
+            }
+            const contactInfo = []
+            if (friend.phone_num && friend.phone_num.trim() && friend.phone_num !== '-') {
+              contactInfo.push(`电话: ${friend.phone_num}`)
+            }
+            if (friend.email && friend.email.trim()) contactInfo.push(`邮箱: ${friend.email}`)
+            if (contactInfo.length > 0) {
+              result += `  ${contactInfo.join(' | ')}\n`
+            }
           })
           return result
         } catch (e) {
@@ -431,10 +469,14 @@ export class Admin {
       .usage('获取本账号加入的群组列表')
       .action(async ({ session }) => {
         try {
-          const groups = await session.onebot.getGroupList()
+          const groups = await session.onebot.getGroupList() as OneBotGroupInfo[]
           let result = `群数量: ${groups.length}\n`
           groups.slice(0, 20).forEach((group) => {
-            result += `${group.group_name}(${group.group_id}) | ${group.member_count} 人\n`
+            result += `${group.group_name}(${group.group_id}) [${group.member_count}/${group.max_member_count}]`
+            if (group.group_remark && group.group_remark.trim()) {
+              result += `\n  备注: ${group.group_remark}`
+            }
+            result += '\n'
           })
           return result
         } catch (e) {
