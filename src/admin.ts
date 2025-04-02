@@ -226,7 +226,7 @@ export class Admin {
         }
       })
 
-    const info = this.ctx.command('info', '查询本账号信息')
+    const info = get.subcommand('info', '查询本账号信息')
       .usage('查询当前账号的基本信息')
       .action(async ({ session }) => {
         try {
@@ -289,7 +289,7 @@ export class Admin {
         }
       })
 
-    const group = this.ctx.command('group [group_id:number]', '查询群信息')
+    const group = get.subcommand('group [group_id:number]', '查询群信息')
       .usage('查询指定群的基本信息')
       .option('no-cache', '-n 不使用缓存', { fallback: false })
       .action(async ({ session, options }, group_id) => {
