@@ -18,14 +18,14 @@ export class Zanwo {
   private logger: any
   private ctx: Context
   private timer: NodeJS.Timeout
-  private config: Config['zanwo']
+  private config: Config
 
   /**
    * 创建点赞功能实例
    * @param {Context} ctx - Koishi上下文对象
-   * @param {Config['zanwo']} config - 插件配置
+   * @param {Config} config - 插件配置
    */
-  constructor(ctx: Context, config: Config['zanwo']) {
+  constructor(ctx: Context, config: Config) {
     this.ctx = ctx
     this.config = config
     this.logger = ctx.logger('zanwo')

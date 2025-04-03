@@ -18,12 +18,9 @@ declare module "koishi" {
 }
 
 export interface Config {
-  zanwo: {
     adminAccount: string
     enableNotify: boolean
     autoLike: boolean
-  }
-  poke: {
     enabled: boolean
     interval?: number
     enableStick?: boolean
@@ -35,11 +32,10 @@ export interface Config {
       content: string;
       weight: number;
     }>
-  }
 }
 
-export const Config: Schema<Config> = Schema.object({
-  zanwo: Schema.object({
+export const Config: Schema<Config> = Schema.intersect([
+  Schema.object({
     adminAccount: Schema.string()
       .description('管理员账号')
       .default(''),
@@ -51,7 +47,7 @@ export const Config: Schema<Config> = Schema.object({
       .default(true),
   }).description('点赞配置'),
 
-  poke: Schema.object({
+  Schema.object({
     cdTime: Schema.number()
       .default(10).min(0)
       .description('命令冷却时间（秒）'),
@@ -94,26 +90,26 @@ export const Config: Schema<Config> = Schema.object({
       .description('启用自动表情回复')
       .default(false)
   }).description('戳一戳及表情回复配置')
-})
+])
 
 export function apply(ctx: Context, config: Config) {
 
-  const zanwo = new Zanwo(ctx, config.zanwo)
-  const poke = new Poke(ctx, config.poke)
+  const zanwo = new Zanwo(ctx, config)
+  const poke = new Poke(ctx, config)
   const stick = new Stick(ctx)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
 
-  if (config.poke.enableStick) {
+  if (config.enableStick) {
     ctx.middleware(async (session, next) => {
       await stick.processMessage(session);
       return next();
     });
   }
 
-  if (config.poke.enabled) {
+  if (config.enabled) {
     ctx.on('notice', async (session) => {
       await poke.processNotice(session);
     });

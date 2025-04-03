@@ -31,7 +31,7 @@ export class Poke {
    * @param ctx Koishi 上下文
    * @param config 戳一戳配置
    */
-  constructor(private ctx: Context, private config: Config['poke']) {
+  constructor(private ctx: Context, private config: Config) {
     if (config?.responses?.length) {
       this.totalWeight = config.responses.reduce((sum, resp) => sum + resp.weight, 0);
       if (this.totalWeight > 100) {
