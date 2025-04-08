@@ -5,6 +5,7 @@ import { Poke } from './poke'
 import { Stick } from './stick'
 
 export const name = 'onebot-tool'
+export const inject = { optional: ['cron'] }
 
 declare module "koishi" {
   interface Events {
@@ -18,8 +19,6 @@ declare module "koishi" {
 }
 
 export interface Config {
-    adminAccount: string
-    enableNotify: boolean
     autoLike: boolean
     enabled: boolean
     interval?: number
@@ -36,14 +35,8 @@ export interface Config {
 
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
-    adminAccount: Schema.string()
-      .description('管理员账号')
-      .default(''),
-    enableNotify: Schema.boolean()
-      .description('开启回赞提醒')
-      .default(false),
     autoLike: Schema.boolean()
-      .description('开启自动批量点赞')
+      .description('开启每日自动点赞')
       .default(true),
   }).description('点赞配置'),
 
@@ -77,12 +70,12 @@ export const Config: Schema<Config> = Schema.intersect([
       {
         type: 'message',
         content: '<at id={userId}/>你干嘛~',
-        weight: 50
+        weight: 0
       },
       {
         type: 'command',
         content: 'poke',
-        weight: 50
+        weight: 100
       }
     ])
     .description('响应列表'),
