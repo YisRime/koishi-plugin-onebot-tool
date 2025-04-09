@@ -10,8 +10,8 @@
 
 - 用户发送"赞我"后，机器人会给该用户点赞
 - 支持管理点赞列表，可添加或移除用户
-- 可配置是否开启回赞提醒功能
 - 支持每日自动点赞功能
+- 自动撤回命令响应消息，保持聊天环境整洁
 
 ### 戳一戳响应
 
@@ -25,7 +25,8 @@
 
 - 支持自动识别消息中的表情并作出回应
 - 提供表情ID查询命令
-- 支持发送随机表情
+- 支持发送随机表情和多个表情组合
+- 丰富的表情表达，自定义表情响应
 
 ## 命令说明
 
@@ -33,11 +34,11 @@
 
 - `zanwo` / `赞我` - 为自己点赞
 - `zanwo.user @用户` - 为指定用户点赞
-- `zanwo.list` - 查看当前点赞列表中的用户
-- `zanwo.clear` - 清空点赞列表中的用户
-- `zanwo.add @用户` - 添加指定用户到点赞列表
-- `zanwo.remove @用户` - 从点赞列表移除指定用户
-- `zanwo.all` - 立即执行对列表中所有用户的点赞
+- `zanwo.list` - 查看当前点赞列表中的用户（需要权限等级3）
+- `zanwo.add @用户` - 添加指定用户到点赞列表（需要权限等级2）
+- `zanwo.remove @用户` - 从点赞列表移除指定用户（需要权限等级2）
+- `zanwo.all` - 立即执行对列表中所有用户的点赞（需要权限等级3）
+- `zanwo.clear` - 清空点赞列表中的用户（需要权限等级4）
 
 ### 戳一戳
 
@@ -59,26 +60,21 @@
 ## 插件配置
 
 ```yaml
-zanwo:
-  adminAccount: ''       # 管理员QQ号
-  adminOnly: true        # 仅管理员可配置列表
-  enableNotify: false    # 开启回赞提醒
-  autoLike: true         # 启用每日自动点赞
-
+  autoLike: false        # 启用每日自动点赞
+  enableStick: false     # 启用自动回复表情
 poke:
-  enabled: true          # 是否启用戳一戳功能
-  interval: 1000         # 触发冷却时间(ms)，设置为0关闭限制
+  enabled: true          # 启用自动响应戳一戳
+  interval: 1000         # 戳一戳响应间隔(ms)，设置为0关闭限制
   cdTime: 10             # 命令冷却时间(秒)，设置为0关闭限制
-  maxTimes: 3            # 单次戳一戳请求最大次数(1-200)
-  actionInterval: 500    # 请求多次戳一戳之间的间隔(ms)
-  enableStick: false     # 是否启用表情回复功能
+  maxTimes: 3            # 单次次数限制(1-200)
+  actionInterval: 500    # 戳一戳间隔(ms)
   responses:
     - type: 'message'    # 类型：message(消息)或command(命令)
       content: '<at id={userId}/>你干嘛~'
-      weight: 50         # 触发概率权重(0-100)
+      weight: 0         # 触发概率权重(0-100)
     - type: 'command'
       content: 'poke'
-      weight: 50
+      weight: 100
 ```
 
 ## 使用方法
