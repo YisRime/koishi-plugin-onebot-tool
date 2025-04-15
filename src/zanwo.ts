@@ -92,15 +92,17 @@ export class Zanwo {
 
   async sendLike(session, userId: string): Promise<boolean> {
     try {
+      let successCount = 0;
       for (let i = 0; i < 5; i++) {
         try {
           await session.bot.internal.sendLike(userId, 10)
-          return true
-        } catch (err) {}
+          successCount++;
+        } catch (err) {
+        }
       }
-      return false
-    } catch {
-      return false
+      return successCount > 0;
+    } catch (error) {
+      return false;
     }
   }
 
