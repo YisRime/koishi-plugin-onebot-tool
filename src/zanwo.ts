@@ -4,20 +4,32 @@ import { readFile, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { Config } from './index'
 import { utils } from './utils'
-import {} from 'koishi-plugin-cron'
 
 /**
  * QQ点赞功能管理类
+ * 处理自动点赞、点赞列表管理和相关命令
  */
 export class Zanwo {
+  /** 点赞目标用户ID集合 */
   private targets: Set<string> = new Set()
+  /** 点赞列表文件路径 */
   private filePath: string
+  /** 日志记录器 */
   private logger: any
+  /** Koishi上下文 */
   private ctx: Context
+  /** 定时任务对象 */
   private cronJob: any
+  /** 定时器 */
   private timer: NodeJS.Timeout
+  /** 插件配置 */
   private config: Config
 
+  /**
+   * 创建点赞管理实例
+   * @param ctx - Koishi上下文
+   * @param config - 插件配置
+   */
   constructor(ctx: Context, config: Config) {
     this.ctx = ctx
     this.config = config
@@ -27,6 +39,10 @@ export class Zanwo {
     this.startAutoLikeTimer()
   }
 
+  /**
+   * 从文件加载点赞目标列表
+   * @returns Promise 加载完成的Promise
+   */
   private async loadTargetsFromFile(): Promise<void> {
     if (!existsSync(this.filePath)) return
     try {
@@ -38,6 +54,10 @@ export class Zanwo {
     }
   }
 
+  /**
+   * 启动自动点赞定时器
+   * 根据配置使用cron或setInterval
+   */
   private startAutoLikeTimer(): void {
     if (this.cronJob) this.cronJob.dispose()
     if (this.timer) clearInterval(this.timer)
@@ -53,6 +73,11 @@ export class Zanwo {
     }
   }
 
+  /**
+   * 执行自动点赞
+   * @param session - 可选的会话对象，用于发送点赞请求
+   * @returns Promise 点赞执行完成的Promise
+   */
   private async executeAutoLike(session?): Promise<void> {
     const targets = [...this.targets]
     if (!targets.length) return
@@ -68,6 +93,12 @@ export class Zanwo {
     }
   }
 
+  /**
+   * 处理点赞目标列表的增删查清
+   * @param action - 操作类型：'add'添加, 'remove'移除, 'get'获取, 'clear'清空
+   * @param userId - 用户ID，用于add和remove操作
+   * @returns 操作结果。get返回目标数组，其他返回布尔值表示成功与否
+   */
   async handleTargets(action: 'add' | 'remove' | 'get' | 'clear', userId?: string): Promise<boolean | string[]> {
     if (action === 'get') return [...this.targets]
     if (action === 'clear') {
@@ -90,6 +121,12 @@ export class Zanwo {
     return result
   }
 
+  /**
+   * 发送点赞请求
+   * @param session - 会话对象，用于发送点赞请求
+   * @param userId - 目标用户ID
+   * @returns Promise<boolean> 点赞是否成功
+   */
   async sendLike(session, userId: string): Promise<boolean> {
     try {
       let successCount = 0;
@@ -106,7 +143,16 @@ export class Zanwo {
     }
   }
 
+  /**
+   * 注册点赞相关命令
+   */
   registerCommands(): void {
+    /**
+     * 处理回复并自动撤回
+     * @param session - 会话对象
+     * @param message - 要发送的消息
+     * @returns 空字符串
+     */
     const handleReply = async (session, message) => {
       const msg = await session.send(message)
       await utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
@@ -120,13 +166,11 @@ export class Zanwo {
         const success = await this.sendLike(session, session.userId)
         return handleReply(session, success ? `点赞完成，记得回赞哦~` : '点赞失败，请尝试添加好友')
       })
-
     zanwo.subcommand('.list', { authority: 3 })
       .action(async ({}) => {
         const targets = await this.handleTargets('get') as string[];
         return targets.length ? `当前点赞列表（共${targets.length}人）：${targets.join(', ')}` : '点赞列表为空'
       })
-
     zanwo.subcommand('.add <target:text>', { authority: 2 })
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
@@ -134,7 +178,6 @@ export class Zanwo {
         const success = await this.handleTargets('add', userId)
         return handleReply(session, success ? `已添加 ${userId} 到点赞列表` : '添加失败')
       })
-
     zanwo.subcommand('.remove <target:text>', { authority: 2 })
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
@@ -142,7 +185,6 @@ export class Zanwo {
         const success = await this.handleTargets('remove', userId)
         return handleReply(session, success ? `已从点赞列表移除 ${userId}` : '移除失败')
       })
-
     zanwo.subcommand('.user <target:text>')
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
@@ -150,13 +192,11 @@ export class Zanwo {
         const success = await this.sendLike(session, userId)
         return handleReply(session, success ? `点赞完成，记得回赞哦~` : '点赞失败，请尝试添加好友')
       })
-
     zanwo.subcommand('.all', { authority: 3 })
       .action(async ({ session }) => {
         this.executeAutoLike(session)
         return '已开始点赞'
       })
-
     zanwo.subcommand('.clear', { authority: 4 })
       .action(async ({}) => {
         this.handleTargets('clear')
@@ -164,6 +204,10 @@ export class Zanwo {
       })
   }
 
+  /**
+   * 释放资源
+   * 清理定时任务和计时器
+   */
   dispose(): void {
     if (this.cronJob) {
       this.cronJob.dispose()

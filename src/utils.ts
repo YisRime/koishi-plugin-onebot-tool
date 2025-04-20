@@ -2,6 +2,7 @@ import { Session, h } from 'koishi';
 
 /**
  * 工具函数集合
+ * 提供通用工具方法供插件其他模块使用
  */
 export const utils = {
   /**

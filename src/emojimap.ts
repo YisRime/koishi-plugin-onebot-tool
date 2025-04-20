@@ -1,6 +1,10 @@
 /**
  * QQ表情映射：表情名称 -> 表情ID
- * 按照表情ID的数字顺序排列
+ * 包含了QQ支持的所有表情，按照表情ID的数字顺序排列
+ * 可用于表情回复和查询功能
+ * @example
+ * EMOJI_MAP["赞"] // 返回: "76"
+ * EMOJI_MAP["踩"] // 返回: "77"
  */
 export const EMOJI_MAP: Record<string, string> = {
   "惊讶": "0",
@@ -359,6 +363,8 @@ export const EMOJI_MAP: Record<string, string> = {
 
 /**
  * 常用表情符号列表
+ * 包含了常见的emoji表情符号
+ * 用于检查输入内容是否为emoji表情
  */
 export const COMMON_EMOJIS = [
   '😊', '😌', '😚', '😓', '😰', '😝', '😁', '😜', '😍', '😔',

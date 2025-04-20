@@ -4,6 +4,7 @@ import { utils } from "./utils";
 
 declare module 'koishi' {
   interface Session {
+    /** 标记是否已触发响应，用于防止循环响应 */
     _responseTriggered?: boolean;
   }
 }
@@ -13,23 +14,30 @@ declare module 'koishi' {
  * @interface PokeResponse
  */
 interface PokeResponse {
+  /** 响应类型：命令或消息 */
   type: "command" | "message";
+  /** 响应内容：命令字符串或消息文本 */
   content: string;
+  /** 触发权重：0-100之间 */
   weight: number;
 }
 
 /**
  * 处理戳一戳功能的类
+ * 包括戳一戳通知处理、随机响应和命令注册
  */
 export class Poke {
+  /** 用户戳一戳缓存，记录最后一次戳一戳时间 */
   private cache = new Map<string, number>();
+  /** 响应总权重 */
   private totalWeight: number = 0;
+  /** 命令冷却时间缓存 */
   private commandCooldown = new Map<string, number>();
 
   /**
    * 创建戳一戳处理器
-   * @param ctx Koishi 上下文
-   * @param config 戳一戳配置
+   * @param ctx - Koishi 上下文
+   * @param config - 戳一戳配置
    */
   constructor(private ctx: Context, private config: Config) {
     if (config?.responses?.length) {
@@ -46,6 +54,7 @@ export class Poke {
 
   /**
    * 清理资源
+   * 释放缓存占用的内存
    */
   dispose() {
     this.cache.clear();
@@ -54,6 +63,7 @@ export class Poke {
 
   /**
    * 注册戳一戳命令
+   * 允许用户通过命令发送戳一戳
    */
   registerCommand() {
     this.ctx.command('poke [times:number] [target:string]', '戳一戳')

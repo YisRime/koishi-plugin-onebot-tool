@@ -3,15 +3,17 @@ import { EMOJI_MAP, COMMON_EMOJIS } from './emojimap'
 
 /**
  * 表情回复功能处理类
+ * 负责处理QQ表情回复功能，包括表情解析、发送和命令注册
  */
 export class Stick {
+  /** 日志记录器 */
   private readonly logger: ReturnType<Context['logger']>
+  /** 数字类型表情ID列表 */
   private readonly numericEmojiIds: string[]
 
   /**
    * 创建表情回复处理器
-   * @param ctx Koishi 上下文
-   * @param config 表情回复配置
+   * @param ctx - Koishi 上下文
    */
   constructor(private ctx: Context) {
     this.logger = ctx.logger('stick')
@@ -22,7 +24,7 @@ export class Stick {
 
   /**
    * 解析表情ID - 将名称或ID转换为有效的表情ID
-   * @param input 表情名称或ID
+   * @param input - 表情名称或ID
    * @returns 有效的表情ID，如果无效则返回null
    */
   private resolveEmojiId(input: string): string | null {
@@ -48,7 +50,9 @@ export class Stick {
 
   /**
    * 处理消息中的表情回复
-   * 由外部中间件调用
+   * 扫描消息中的表情元素并添加相应表情回应
+   * @param session - 会话对象
+   * @returns Promise<boolean> 是否成功处理了表情
    */
   async processMessage(session: Session): Promise<boolean> {
     if (session.userId === session.selfId) return false
@@ -68,8 +72,9 @@ export class Stick {
 
   /**
    * 错误处理包装器
-   * @param fn 需要执行的异步函数
-   * @param defaultValue 发生错误时返回的默认值
+   * @param fn - 需要执行的异步函数
+   * @param defaultValue - 发生错误时返回的默认值
+   * @returns Promise<T> 函数执行结果或默认值
    */
   private async wrapWithErrorHandling<T>(fn: () => Promise<T>, defaultValue: T): Promise<T> {
     try {
@@ -82,6 +87,8 @@ export class Stick {
 
   /**
    * 对表情列表进行排序
+   * @param emojiList - 表情名称和ID的键值对数组
+   * @returns 排序后的表情列表
    */
   private sortEmojiList(emojiList: [string, string][]): [string, string][] {
     return emojiList.sort((a, b) => {
@@ -98,6 +105,10 @@ export class Stick {
 
   /**
    * 格式化表情列表为文本显示
+   * @param emojiList - 表情名称和ID的键值对数组
+   * @param page - 当前页码，默认1
+   * @param keyword - 搜索关键词，默认空
+   * @returns 格式化后的表情列表文本
    */
   private formatEmojiList(emojiList: [string, string][], page = 1, keyword = ''): string {
     const totalItems = emojiList.length;
@@ -125,6 +136,7 @@ export class Stick {
 
   /**
    * 注册表情回复命令
+   * 包括表情回复、随机表情、表情搜索和表情列表等功能
    */
   registerCommand() {
     const stick = this.ctx.command('stick [faceId:string]', '表情回复')
@@ -162,8 +174,6 @@ export class Stick {
           return this.addReaction(session, targetMessageId, emojiId);
         }, undefined);
       });
-
-    // 随机表情子命令
     stick.subcommand('.random [count:number]', '回复随机表情')
       .action(({ session }, count = 1) => {
         return this.wrapWithErrorHandling(async () => {
@@ -174,8 +184,6 @@ export class Stick {
           return this.sendRandomFaces(session, count, targetMessageId);
         }, undefined);
       });
-
-    // 表情搜索子命令
     stick.subcommand('.search [keyword:string]', '搜索表情')
       .example('stick.search 龙 - 搜索包含"龙"的表情')
       .action(({ }, keyword) => {
@@ -189,8 +197,7 @@ export class Stick {
           return this.formatEmojiList(emojiList, 1, keyword);
         }, '搜索表情失败');
       })
-      // 表情列表子命令
-      .subcommand('.list [page:number]', '查看支持的表情列表')
+    stick.subcommand('.list [page:number]', '查看支持的表情列表')
       .action(({}, page = 1) => {
         return this.wrapWithErrorHandling(async () => {
           const emojiList = this.sortEmojiList(Object.entries(EMOJI_MAP));
@@ -201,6 +208,10 @@ export class Stick {
 
   /**
    * 添加表情回应
+   * @param session - 会话对象
+   * @param messageId - 目标消息ID
+   * @param emojiId - 表情ID
+   * @returns Promise<void>
    */
   private async addReaction(session: Session, messageId: number | string, emojiId: string): Promise<void> {
     await session.onebot._request('set_msg_emoji_like', {
@@ -212,6 +223,8 @@ export class Stick {
 
   /**
    * Fisher-Yates洗牌算法随机打乱数组
+   * @param array - 需要打乱的数组
+   * @returns 打乱后的新数组
    */
   private shuffleArray<T>(array: T[]): T[] {
     const result = [...array]
@@ -224,6 +237,10 @@ export class Stick {
 
   /**
    * 发送多个随机表情
+   * @param session - 会话对象
+   * @param count - 表情数量
+   * @param messageId - 目标消息ID
+   * @returns Promise<void>
    */
   private async sendRandomFaces(session: Session, count: number, messageId: number | string): Promise<void> {
     if (this.numericEmojiIds.length === 0) {
