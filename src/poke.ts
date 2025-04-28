@@ -10,7 +10,7 @@ declare module 'koishi' {
 }
 
 /**
- * 定义戳一戳响应的结构
+ * 定义拍一拍响应的结构
  * @interface PokeResponse
  */
 interface PokeResponse {
@@ -23,11 +23,11 @@ interface PokeResponse {
 }
 
 /**
- * 处理戳一戳功能的类
- * 包括戳一戳通知处理、随机响应和命令注册
+ * 处理拍一拍功能的类
+ * 包括拍一拍通知处理、随机响应和命令注册
  */
 export class Poke {
-  /** 用户戳一戳缓存，记录最后一次戳一戳时间 */
+  /** 用户拍一拍缓存，记录最后一次拍一拍时间 */
   private cache = new Map<string, number>();
   /** 响应总权重 */
   private totalWeight: number = 0;
@@ -35,9 +35,9 @@ export class Poke {
   private commandCooldown = new Map<string, number>();
 
   /**
-   * 创建戳一戳处理器
+   * 创建拍一拍处理器
    * @param ctx - Koishi 上下文
-   * @param config - 戳一戳配置
+   * @param config - 拍一拍配置
    */
   constructor(private ctx: Context, private config: Config) {
     if (config?.responses?.length) {
@@ -62,12 +62,86 @@ export class Poke {
   }
 
   /**
-   * 注册戳一戳命令
-   * 允许用户通过命令发送戳一戳
+   * 获取一言内容
+   * @param params 一言参数，直接拼接到API URL
+   * @returns 一言内容，包含出处和作者
+   */
+  private async getHitokoto(params?: string): Promise<string> {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      const url = `https://v1.hitokoto.cn/${params ? `?${params}` : ''}`
+      const response = await fetch(url, { signal: controller.signal })
+      clearTimeout(timeout)
+      if (!response.ok) return ''
+      const data = await response.json()
+      if (!data?.hitokoto) return ''
+      // 没有来源直接返回一言
+      if (!data.from) return data.hitokoto
+      // 处理引用部分
+      const showAuthor = data.from_who && data.from_who !== data.from
+      const citation = `——${showAuthor ? ` ${data.from_who}` : ''}《${data.from}》`
+      // 计算字符宽度
+      const getTextWidth = (text: string) => [...text].reduce((width, char) =>
+        width + (/[\u4e00-\u9fa5\u3000-\u30ff\u3130-\u318f\uac00-\ud7af]/.test(char) ? 2 : 1), 0)
+      const contentWidth = getTextWidth(data.hitokoto)
+      const citationWidth = getTextWidth(citation)
+      const maxWidth = 36
+      const referenceWidth = Math.min(contentWidth, maxWidth)
+      const spacesNeeded = Math.max(0, referenceWidth - citationWidth)
+      return `${data.hitokoto}\n${' '.repeat(spacesNeeded)}${citation}`
+    } catch {
+      return ''
+    }
+  }
+
+  /**
+   * 替换所有占位符
+   * @param content 消息内容
+   * @param session 会话对象
+   * @returns 替换后的内容
+   */
+  private async replacePlaceholders(content: string, session: Session): Promise<string> {
+    if (!content.includes('{')) {
+      return content;
+    }
+    // 收集所有一言占位符
+    const hitokotoMatches = [...content.matchAll(/{hitokoto(?::([^}]*))?}/g)];
+    // 如果有一言占位符，并行获取所有一言内容
+    let hitokotoContents: {pattern: string, content: string}[] = [];
+    if (hitokotoMatches.length > 0) {
+      hitokotoContents = await Promise.all(
+        hitokotoMatches.map(match =>
+          this.getHitokoto(match[1] || '')
+            .then(content => ({ pattern: match[0], content }))
+        )
+      );
+    }
+    // 一次性替换所有占位符
+    let result = content
+      // 替换{at}占位符
+      .replace(/{at}/g, `<at id="${session.userId}"/>`)
+      // 替换{username}占位符
+      .replace(/{username}/g, session.username || session.userId)
+      // 替换{image:URL}占位符
+      .replace(/{image:([^}]+)}/g, '<image url="$1"/>');
+    // 替换所有一言占位符
+    if (hitokotoContents.length > 0) {
+      result = hitokotoContents.reduce(
+        (text, { pattern, content }) => text.replace(pattern, content),
+        result
+      );
+    }
+    return result;
+  }
+
+  /**
+   * 注册拍一拍命令
+   * 允许用户通过命令发送拍一拍
    */
   registerCommand() {
-    this.ctx.command('poke [times:number] [target:string]', '戳一戳')
-      .usage('发送戳一戳，可指定次数和目标用户')
+    this.ctx.command('poke [times:number] [target:string]', '拍一拍')
+      .usage('发送拍一拍，可指定次数和目标用户')
       .example('poke 3 - 戳自己三次')
       .example('poke @12345 - 戳用户@12345一次')
       .example('poke 3 @12345 - 戳用户@12345三次')
@@ -84,7 +158,7 @@ export class Poke {
             const cooldownRemaining = lastUsed + cdTime - now;
             if (cooldownRemaining > 0) {
               const seconds = Math.ceil(cooldownRemaining / 1000);
-              const msgId = await session.send(`请等待${seconds}秒后再戳一戳哦~`);
+              const msgId = await session.send(`请等待${seconds}秒后再拍一拍哦~`);
               utils.autoRecall(session, Array.isArray(msgId) ? msgId[0] : msgId);
               return;
             }
@@ -97,7 +171,7 @@ export class Poke {
           if (isNaN(times)) times = 1;
           const maxTimes = this.config.maxTimes;
           if (times > maxTimes) {
-            const msgId = await session.send(`单次戳一戳请求不能超过${maxTimes}次哦~`);
+            const msgId = await session.send(`单次拍一拍请求不能超过${maxTimes}次哦~`);
             utils.autoRecall(session, Array.isArray(msgId) ? msgId[0] : msgId);
             return;
           }
@@ -120,14 +194,14 @@ export class Poke {
           }
           return '';
         } catch (error) {
-          this.ctx.logger('poke').warn('戳一戳失败:', error);
+          this.ctx.logger('poke').warn('拍一拍失败:', error);
           return;
         }
       });
   }
 
   /**
-   * 处理戳一戳通知
+   * 处理拍一拍通知
    * 由外部监听器调用
    */
   async processNotice(session: Session): Promise<boolean> {
@@ -151,11 +225,13 @@ export class Poke {
         await session.execute(response.content);
         delete session._responseTriggered;
       } else {
-        await session.sendQueued(h.parse(response.content, session));
+        // 处理占位符
+        const processedContent = await this.replacePlaceholders(response.content, session);
+        await session.sendQueued(h.parse(processedContent, session));
       }
       return true;
     } catch (error) {
-      this.ctx.logger('poke').warn('戳一戳响应失败:', error);
+      this.ctx.logger('poke').warn('拍一拍响应失败:', error);
       return false;
     }
   }

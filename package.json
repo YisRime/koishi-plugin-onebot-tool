@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-onebot-tool",
-  "description": "适用于 Onebot 的 QQ 工具集，提供自动点赞、个性化戳一戳响应和丰富的表情回复功能",
+  "description": "OneBot 工具集，实现自动点赞、拍一拍回应和丰富的表情回复，可自定义配置",
   "version": "1.5.0",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"

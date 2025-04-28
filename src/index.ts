@@ -29,11 +29,25 @@ declare module "koishi" {
   }
 
   interface Session {
-    /** 戳一戳目标ID */
+    /** 拍一拍目标ID */
     targetId?: string;
     /** 通知子类型 */
     subtype?: string;
   }
+}
+
+/**
+ * 表情回复模式
+ */
+export enum StickMode {
+  /** 关闭表情回复 */
+  Off = 'off',
+  /** 仅回复关键词 */
+  KeywordOnly = 'keyword',
+  /** 仅处理包含表情 */
+  EmojiOnly = 'emoji',
+  /** 处理所有表情 */
+  All = 'all'
 }
 
 /**
@@ -42,19 +56,19 @@ declare module "koishi" {
 export interface Config {
     /** 是否启用每日自动点赞 */
     autoLike: boolean
-    /** 是否启用戳一戳自动响应 */
+    /** 是否启用拍一拍自动响应 */
     enabled: boolean
-    /** 戳一戳响应间隔(毫秒) */
+    /** 拍一拍响应间隔(毫秒) */
     interval?: number
-    /** 是否启用表情自动回复 */
-    enableStick?: boolean
-    /** 单次戳一戳最大次数 */
+    /** 表情回复模式 */
+    stickMode?: StickMode
+    /** 单次拍一拍最大次数 */
     maxTimes?: number
-    /** 连续戳一戳间隔(毫秒) */
+    /** 连续拍一拍间隔(毫秒) */
     actionInterval?: number
     /** 命令冷却时间(秒) */
     cdTime?: number
-    /** 戳一戳响应列表 */
+    /** 拍一拍响应列表 */
     responses?: Array<{
       /** 响应类型：命令或消息 */
       type: "command" | "message";
@@ -62,6 +76,13 @@ export interface Config {
       content: string;
       /** 响应触发权重 */
       weight: number;
+    }>
+    /** 关键词表情映射列表 */
+    keywordEmojis?: Array<{
+      /** 触发关键词 */
+      keyword: string;
+      /** 回复的表情ID或名称 */
+      emojiId: string;
     }>
 }
 
@@ -71,9 +92,19 @@ export interface Config {
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     autoLike: Schema.boolean()
-      .description('启用每日自动点赞').default(true),
-    enableStick: Schema.boolean()
-      .description('启用自动回复表情').default(false)
+      .description('启用自动点赞').default(true),
+    stickMode: Schema.union([
+      Schema.const(StickMode.Off).description('关闭'),
+      Schema.const(StickMode.All).description('二者'),
+      Schema.const(StickMode.KeywordOnly).description('仅关键词'),
+      Schema.const(StickMode.EmojiOnly).description('仅同表情')
+    ]).description('表情回复模式').default(StickMode.Off),
+    keywordEmojis: Schema.array(Schema.object({
+      keyword: Schema.string().description('触发关键词'),
+      emojiId: Schema.string().description('表情名称/ID')
+    })).default([
+      { keyword: '点赞', emojiId: '76' }
+    ]).description('关键词列表').role('table')
   }).description('工具配置'),
   Schema.object({
     cdTime: Schema.number()
@@ -81,11 +112,11 @@ export const Config: Schema<Config> = Schema.intersect([
     maxTimes: Schema.number()
       .description('单次次数限制').default(3).min(1).max(200),
     actionInterval: Schema.number()
-      .description('戳一戳间隔（毫秒）').default(500).min(100),
+      .description('拍一拍间隔（毫秒）').default(500).min(100),
     enabled: Schema.boolean()
-      .description('启用自动响应戳一戳').default(true),
+      .description('启用自动响应').default(true),
     interval: Schema.number()
-      .description('戳一戳响应间隔（毫秒）').default(1000).min(0),
+      .description('自动响应间隔（毫秒）').default(1000).min(0),
     responses: Schema.array(Schema.object({
       type: Schema.union([
         Schema.const('command').description('执行命令'),
@@ -93,12 +124,14 @@ export const Config: Schema<Config> = Schema.intersect([
       ]).description('响应类型'),
       content: Schema.string().description('响应内容'),
       weight: Schema.number()
-        .description('触发权重').default(50).min(0).max(100),
+        .description('触发权重').default(50).min(0).max(100)
     })).default([
-      { type: 'message', content: '<at id={userId}/>你干嘛~', weight: 0 },
+      { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
+      { type: 'message', content: '{hitokoto}', weight: 0 },
+      { type: 'message', content: '{image:https://api.sretna.cn/api/anime.php}', weight: 0 },
       { type: 'command', content: 'poke', weight: 100 }
-    ]).description('响应列表').role('table'),
-  }).description('戳一戳配置')
+    ]).description('响应列表').role('table')
+  }).description('拍一拍配置')
 ])
 
 /**
@@ -109,13 +142,13 @@ export const Config: Schema<Config> = Schema.intersect([
 export function apply(ctx: Context, config: Config) {
   const zanwo = new Zanwo(ctx, config)
   const poke = new Poke(ctx, config)
-  const stick = new Stick(ctx)
+  const stick = new Stick(ctx, config)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
 
-  if (config.enableStick) {
+  if (config.stickMode !== StickMode.Off) {
     ctx.middleware(async (session, next) => {
       await stick.processMessage(session);
       return next();

@@ -1,65 +1,77 @@
 import { Context, h, Session } from 'koishi'
 import { EMOJI_MAP, COMMON_EMOJIS } from './emojimap'
+import { Config, StickMode } from './index'
 
 /**
  * 表情回复功能处理类
- * 负责处理QQ表情回复功能，包括表情解析、发送和命令注册
+ * 处理消息中的表情元素并作出表情回应
  */
 export class Stick {
   /** 日志记录器 */
   private readonly logger: ReturnType<Context['logger']>
-  /** 数字类型表情ID列表 */
+  /** 数字形式的表情ID列表 */
   private readonly numericEmojiIds: string[]
+  /** 关键词到表情ID的映射 */
+  private readonly keywordMap: Map<string, string> = new Map()
+  /** 表情回复模式 */
+  private readonly mode: StickMode
 
   /**
-   * 创建表情回复处理器
+   * 创建表情回复处理器实例
    * @param ctx - Koishi 上下文
+   * @param config - 配置项
    */
-  constructor(private ctx: Context) {
+  constructor(private ctx: Context, private config?: Config) {
     this.logger = ctx.logger('stick')
-    // 预处理数字表情ID列表
-    this.numericEmojiIds = Object.values(EMOJI_MAP)
-      .filter(id => /^\d+$/.test(id))
+    this.numericEmojiIds = Object.values(EMOJI_MAP).filter(id => /^\d+$/.test(id))
+    this.mode = config?.stickMode || StickMode.Off
+    // 初始化关键词映射
+    if (config?.keywordEmojis?.length) {
+      for (const item of config.keywordEmojis) {
+        const emojiId = this.resolveEmojiId(item.emojiId)
+        if (emojiId) {
+          this.keywordMap.set(item.keyword, emojiId)
+        } else {
+          this.logger.warn(`无效的表情ID或名称: ${item.emojiId}`)
+        }
+      }
+    }
   }
 
   /**
    * 解析表情ID - 将名称或ID转换为有效的表情ID
    * @param input - 表情名称或ID
-   * @returns 有效的表情ID，如果无效则返回null
+   * @returns 有效的表情ID或null
    */
   private resolveEmojiId(input: string): string | null {
-    // 检查EMOJI_MAP中是否有对应名称
-    if (EMOJI_MAP[input]) {
-      return EMOJI_MAP[input]
-    }
-    // 检查是否为数字ID
-    if (/^\d+$/.test(input)) {
+    if (EMOJI_MAP[input]) return EMOJI_MAP[input]
+    if (/^\d+$/.test(input) || input === 'default' || COMMON_EMOJIS.some(emoji => input.startsWith(emoji)))
       return input
-    }
-    // 检查是否为默认表情
-    if (input === 'default') {
-      return input
-    }
-    // 检查是否以emoji开头
-    if (COMMON_EMOJIS.some(emoji => input.startsWith(emoji))) {
-      return input
-    }
-    // 无效的表情ID/名称
     return null
   }
 
   /**
    * 处理消息中的表情回复
-   * 扫描消息中的表情元素并添加相应表情回应
    * @param session - 会话对象
-   * @returns Promise<boolean> 是否成功处理了表情
+   * @returns 是否成功添加了表情回应
    */
   async processMessage(session: Session): Promise<boolean> {
     if (session.userId === session.selfId) return false
-    const elements = h.select(h.parse(session.content), 'face')
-    if (!elements.length) return false
-    return this.wrapWithErrorHandling(async () => {
+    try {
+      // 处理关键词表情
       let responded = false
+      if (this.keywordMap.size > 0) {
+        for (const [keyword, emojiId] of this.keywordMap.entries()) {
+          if (session.content.includes(keyword)) {
+            await this.addReaction(session, session.messageId, emojiId)
+            responded = true
+          }
+        }
+      }
+      // 如果仅处理关键词模式，则直接返回
+      if (this.mode === StickMode.KeywordOnly) return responded
+      // 处理表情元素
+      const elements = h.select(h.parse(session.content), 'face')
       for (const element of elements) {
         if (element.attrs?.id) {
           await this.addReaction(session, session.messageId, element.attrs.id)
@@ -67,54 +79,30 @@ export class Stick {
         }
       }
       return responded
-    }, false)
-  }
-
-  /**
-   * 错误处理包装器
-   * @param fn - 需要执行的异步函数
-   * @param defaultValue - 发生错误时返回的默认值
-   * @returns Promise<T> 函数执行结果或默认值
-   */
-  private async wrapWithErrorHandling<T>(fn: () => Promise<T>, defaultValue: T): Promise<T> {
-    try {
-      return await fn()
     } catch (error) {
-      this.logger.warn('表情操作失败:', error)
-      return defaultValue
+      this.logger.warn('表情处理失败:', error)
+      return false
     }
   }
 
   /**
-   * 对表情列表进行排序
-   * @param emojiList - 表情名称和ID的键值对数组
-   * @returns 排序后的表情列表
+   * 格式化表情列表
+   * @param emojiList - 表情列表，每项为[名称, ID]的元组
+   * @param page - 页码，默认为1
+   * @param keyword - 搜索关键词
+   * @returns 格式化后的表情列表文本
    */
-  private sortEmojiList(emojiList: [string, string][]): [string, string][] {
-    return emojiList.sort((a, b) => {
-      const numA = parseInt(a[1]);
-      const numB = parseInt(b[1]);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
+  private formatEmojiList(emojiList: [string, string][], page = 1, keyword = ''): string {
+    // 排序表情列表
+    emojiList.sort((a, b) => {
+      const numA = parseInt(a[1]), numB = parseInt(b[1]);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
       if (!isNaN(numA)) return -1;
       if (!isNaN(numB)) return 1;
       return a[1].localeCompare(b[1]);
     });
-  }
-
-  /**
-   * 格式化表情列表为文本显示
-   * @param emojiList - 表情名称和ID的键值对数组
-   * @param page - 当前页码，默认1
-   * @param keyword - 搜索关键词，默认空
-   * @returns 格式化后的表情列表文本
-   */
-  private formatEmojiList(emojiList: [string, string][], page = 1, keyword = ''): string {
     const totalItems = emojiList.length;
-    if (totalItems === 0) {
-      return keyword ? `没有找到表情"${keyword}"` : '没有可用的表情';
-    }
+    if (totalItems === 0) return keyword ? `没有找到表情"${keyword}"` : '没有可用的表情';
     const itemsPerRow = 4;
     const rowsPerPage = 9;
     const pageSize = itemsPerRow * rowsPerPage;
@@ -136,34 +124,33 @@ export class Stick {
 
   /**
    * 注册表情回复命令
-   * 包括表情回复、随机表情、表情搜索和表情列表等功能
+   * 添加和配置相关的命令行接口
    */
   registerCommand() {
+    const handleError = (error: any, message: string) => {
+      this.logger.warn(message, error);
+      return `${message.replace(':', '')}`;
+    };
     const stick = this.ctx.command('stick [faceId:string]', '表情回复')
       .usage('回复表情消息，默认点赞，支持输入多个表情 ID 或名称')
       .example('stick 76,77 - 使用表情ID回复')
       .example('stick 赞,踩 - 使用表情名称回复')
-      .action(({ session }, faceId) => {
-        return this.wrapWithErrorHandling(async () => {
+      .action(async ({ session }, faceId) => {
+        try {
           const targetMessageId = session.quote?.messageId || session.messageId;
           if (!faceId) {
             return this.addReaction(session, targetMessageId, "76");
           }
           // 处理多个表情ID
           if (faceId.includes(',')) {
-            const parts = faceId.split(',').map(part => part.trim());
-            let validFaceIds = parts
-              .map(part => this.resolveEmojiId(part))
+            let validFaceIds = faceId.split(',')
+              .map(part => this.resolveEmojiId(part.trim()))
               .filter(Boolean) as string[];
             if (validFaceIds.length === 0) {
               return this.addReaction(session, targetMessageId, "76");
             }
-            // 限制表情数量
-            if (validFaceIds.length > 20) {
-              validFaceIds = validFaceIds.slice(0, 20);
-            }
-            // 依次发送表情
-            for (const id of validFaceIds) {
+            // 限制并发送表情
+            for (const id of validFaceIds.slice(0, 20)) {
               await this.addReaction(session, targetMessageId, id);
               await new Promise(resolve => setTimeout(resolve, 500));
             }
@@ -172,67 +159,52 @@ export class Stick {
           // 处理单个表情
           const emojiId = this.resolveEmojiId(faceId) || "76";
           return this.addReaction(session, targetMessageId, emojiId);
-        }, undefined);
+        } catch (error) {
+          return handleError(error, '表情回复失败:');
+        }
       });
     stick.subcommand('.random [count:number]', '回复随机表情')
-      .action(({ session }, count = 1) => {
-        return this.wrapWithErrorHandling(async () => {
+      .action(async ({ session }, count = 1) => {
+        try {
           const targetMessageId = session.quote?.messageId || session.messageId;
-          if (count > 20) {
-            count = 20;
-          }
-          return this.sendRandomFaces(session, count, targetMessageId);
-        }, undefined);
+          return this.sendRandomFaces(session, Math.min(count, 20), targetMessageId);
+        } catch (error) {
+          return handleError(error, '随机表情发送失败:');
+        }
       });
     stick.subcommand('.search [keyword:string]', '搜索表情')
       .example('stick.search 龙 - 搜索包含"龙"的表情')
       .action(({ }, keyword) => {
-        return this.wrapWithErrorHandling(async () => {
-          if (!keyword) {
-            return '请输入要搜索的关键词';
-          }
-          const emojiList = this.sortEmojiList(
-            Object.entries(EMOJI_MAP).filter(([name]) => name.includes(keyword))
-          );
+        try {
+          if (!keyword) return '请输入要搜索的关键词';
+          const emojiList = Object.entries(EMOJI_MAP).filter(([name]) => name.includes(keyword));
           return this.formatEmojiList(emojiList, 1, keyword);
-        }, '搜索表情失败');
-      })
+        } catch (error) {
+          return handleError(error, '表情搜索失败:');
+        }
+      });
     stick.subcommand('.list [page:number]', '查看支持的表情列表')
       .action(({}, page = 1) => {
-        return this.wrapWithErrorHandling(async () => {
-          const emojiList = this.sortEmojiList(Object.entries(EMOJI_MAP));
-          return this.formatEmojiList(emojiList, page);
-        }, '获取表情列表失败');
+        try {
+          return this.formatEmojiList(Object.entries(EMOJI_MAP), page);
+        } catch (error) {
+          return handleError(error, '表情列表获取失败:');
+        }
       });
   }
 
   /**
    * 添加表情回应
    * @param session - 会话对象
-   * @param messageId - 目标消息ID
+   * @param messageId - 消息ID
    * @param emojiId - 表情ID
-   * @returns Promise<void>
    */
   private async addReaction(session: Session, messageId: number | string, emojiId: string): Promise<void> {
     await session.onebot._request('set_msg_emoji_like', {
       message_id: messageId,
       emoji_id: emojiId
-    })
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-
-  /**
-   * Fisher-Yates洗牌算法随机打乱数组
-   * @param array - 需要打乱的数组
-   * @returns 打乱后的新数组
-   */
-  private shuffleArray<T>(array: T[]): T[] {
-    const result = [...array]
-    for (let i = result.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[result[i], result[j]] = [result[j], result[i]]
-    }
-    return result
+    });
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   /**
@@ -240,18 +212,19 @@ export class Stick {
    * @param session - 会话对象
    * @param count - 表情数量
    * @param messageId - 目标消息ID
-   * @returns Promise<void>
    */
   private async sendRandomFaces(session: Session, count: number, messageId: number | string): Promise<void> {
-    if (this.numericEmojiIds.length === 0) {
-      return
+    if (this.numericEmojiIds.length === 0) return;
+    // 随机选择表情
+    const shuffled = [...this.numericEmojiIds];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    const safeCount = Math.min(count, 20, this.numericEmojiIds.length)
-    const selectedEmojis = this.shuffleArray(this.numericEmojiIds).slice(0, safeCount)
     // 依次发送表情
-    for (const id of selectedEmojis) {
-      await this.addReaction(session, messageId, id)
-      await new Promise(resolve => setTimeout(resolve, 500))
+    for (const id of shuffled.slice(0, Math.min(count, 20, this.numericEmojiIds.length))) {
+      await this.addReaction(session, messageId, id);
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 }
