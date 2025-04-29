@@ -128,14 +128,16 @@ export class Zanwo {
    * @returns Promise<boolean> 点赞是否成功
    */
   async sendLike(session, userId: string): Promise<boolean> {
-    try {
-      for (let i = 0; i < 5; i++) {
-        await session.bot.internal.sendLike(userId, 10)
+    let successCount = 0;
+    for (let i = 0; i < 5; i++) {
+      try {
+        await session.bot.internal.sendLike(userId, 10);
+        successCount++;
+      } catch (error) {
+        return successCount > 0;
       }
-      return true;
-    } catch (error) {
-      return false;
     }
+    return successCount > 0;
   }
 
   /**

@@ -4,6 +4,7 @@ import {} from 'koishi-plugin-cron'
 import { Zanwo } from './zanwo'
 import { Poke } from './poke'
 import { Stick } from './stick'
+import { Sign } from './sign'
 
 export const name = 'onebot-tool'
 export const inject = { optional: ['cron'] }
@@ -51,11 +52,25 @@ export enum StickMode {
 }
 
 /**
+ * 打卡模式
+ */
+export enum SignMode {
+  /** 关闭打卡功能 */
+  Off = 'off',
+  /** 手动模式：使用手动添加的群列表 */
+  Manual = 'manual',
+  /** 自动模式：自动获取所有群 */
+  Auto = 'auto'
+}
+
+/**
  * 插件配置接口
  */
 export interface Config {
     /** 是否启用每日自动点赞 */
     autoLike: boolean
+    /** 打卡模式设置 */
+    signMode?: SignMode
     /** 是否启用拍一拍自动响应 */
     enabled: boolean
     /** 拍一拍响应间隔(毫秒) */
@@ -92,7 +107,12 @@ export interface Config {
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     autoLike: Schema.boolean()
-      .description('启用自动点赞').default(true),
+      .description('启用自动点赞').default(false),
+    signMode: Schema.union([
+      Schema.const(SignMode.Off).description('关闭'),
+      Schema.const(SignMode.Manual).description('手动'),
+      Schema.const(SignMode.Auto).description('自动')
+    ]).description('群打卡模式').default(SignMode.Off),
     stickMode: Schema.union([
       Schema.const(StickMode.Off).description('关闭'),
       Schema.const(StickMode.All).description('二者'),
@@ -143,11 +163,17 @@ export function apply(ctx: Context, config: Config) {
   const zanwo = new Zanwo(ctx, config)
   const poke = new Poke(ctx, config)
   const stick = new Stick(ctx, config)
+  const sign = new Sign(ctx, config)
 
   zanwo.registerCommands()
   poke.registerCommand()
   stick.registerCommand()
 
+  if (config.signMode !== SignMode.Manual) {
+    ctx.logger('sign').info('当前模式不是手动模式，不注册群打卡命令')
+  } else {
+    sign.registerCommands()
+  }
   if (config.stickMode !== StickMode.Off) {
     ctx.middleware(async (session, next) => {
       await stick.processMessage(session);
@@ -163,5 +189,6 @@ export function apply(ctx: Context, config: Config) {
   ctx.on('dispose', () => {
     zanwo.dispose()
     poke.dispose()
+    sign.dispose()
   })
 }
