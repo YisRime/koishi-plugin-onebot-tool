@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-onebot-tool",
   "description": "OneBot 工具集，实现自动点赞、群打卡、拍一拍和表情回应等功能，可自定义配置",
-  "version": "1.7.3",
+  "version": "1.8.0",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
   ],
