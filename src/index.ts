@@ -5,6 +5,7 @@ import { Zanwo } from './zanwo'
 import { Poke } from './poke'
 import { Stick } from './stick'
 import { Sign } from './sign'
+import { Voice } from './voice'
 
 export const name = 'onebot-tool'
 export const inject = { optional: ['cron'] }
@@ -38,12 +39,12 @@ declare module "koishi" {
 }
 
 /**
- * 表情回复模式
+ * 表情回应模式
  */
 export enum StickMode {
-  /** 关闭表情回复 */
+  /** 关闭表情回应 */
   Off = 'off',
-  /** 仅回复关键词 */
+  /** 仅回应关键词 */
   KeywordOnly = 'keyword',
   /** 仅处理包含表情 */
   EmojiOnly = 'emoji',
@@ -75,7 +76,7 @@ export interface Config {
     enabled: boolean
     /** 拍一拍响应间隔(毫秒) */
     interval?: number
-    /** 表情回复模式 */
+    /** 表情回应模式 */
     stickMode?: StickMode
     /** 单次拍一拍最大次数 */
     maxTimes?: number
@@ -96,17 +97,34 @@ export interface Config {
     keywordEmojis?: Array<{
       /** 触发关键词 */
       keyword: string;
-      /** 回复的表情ID或名称 */
+      /** 回应的表情ID或名称 */
       emojiId: string;
     }>
     /** Pixiv图片链接json下载地址 */
     pixivUrl?: string
+    /** 是否启用 Zanwo 命令 */
+    enableZanwo?: boolean
+    /** 是否启用 Poke 命令 */
+    enablePoke?: boolean
+    /** 是否启用 Stick 命令 */
+    enableStick?: boolean
+    /** 是否启用 Sign 命令 */
+    enableSign?: boolean
+    /** 是否启用 Voice 命令 */
+    enableVoice?: boolean
 }
 
 /**
  * 插件配置模式定义
  */
 export const Config: Schema<Config> = Schema.intersect([
+  Schema.object({
+    enableZanwo: Schema.boolean().description('启用赞我').default(true),
+    enableSign: Schema.boolean().description('启用打卡').default(true),
+    enablePoke: Schema.boolean().description('启用拍一拍').default(true),
+    enableStick: Schema.boolean().description('启用表情回应').default(true),
+    enableVoice: Schema.boolean().description('启用 AI 语音').default(true)
+  }).description('开关配置'),
   Schema.object({
     autoLike: Schema.boolean()
       .description('启用自动点赞').default(false),
@@ -120,7 +138,7 @@ export const Config: Schema<Config> = Schema.intersect([
       Schema.const(StickMode.All).description('二者'),
       Schema.const(StickMode.KeywordOnly).description('仅关键词'),
       Schema.const(StickMode.EmojiOnly).description('仅同表情')
-    ]).description('表情回复模式').default(StickMode.Off),
+    ]).description('表情回应模式').default(StickMode.Off),
     keywordEmojis: Schema.array(Schema.object({
       keyword: Schema.string().description('触发关键词'),
       emojiId: Schema.string().description('表情名称/ID')
@@ -153,7 +171,7 @@ export const Config: Schema<Config> = Schema.intersect([
     })).default([
       { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
       { type: 'message', content: '{hitokoto}', weight: 0 },
-      { type: 'message', content: '你呆在此地不要走动，我去给你找张插画来~{~}{pixiv}', weight: 100 },
+      { type: 'message', content: '稍等哦~插画一会就来~{~}{pixiv}', weight: 100 },
       { type: 'command', content: 'poke', weight: 0 }
     ]).description('响应列表').role('table')
   }).description('拍一拍配置')
@@ -165,28 +183,30 @@ export const Config: Schema<Config> = Schema.intersect([
  * @param config - 插件配置
  */
 export function apply(ctx: Context, config: Config) {
-  const zanwo = new Zanwo(ctx, config)
-  const poke = new Poke(ctx, config)
-  const stick = new Stick(ctx, config)
-  const sign = new Sign(ctx, config)
+  const logger = ctx.logger('onebot-tool')
+  const zanwo = new Zanwo(ctx, config, logger)
+  const poke = new Poke(ctx, config, logger)
+  const stick = new Stick(ctx, config, logger)
+  const sign = new Sign(ctx, config, logger)
+  const voice = new Voice(ctx, logger)
 
-  zanwo.registerCommands()
-  poke.registerCommand()
-  stick.registerCommand()
+  const qtool = ctx.command('qtool', 'QQ 工具')
+    .usage('点赞、打卡、拍一拍、表情回应和AI语音')
 
-  if (config.signMode === SignMode.Manual) {
-    sign.registerCommands()
-  }
-  if (config.stickMode !== StickMode.Off) {
+  config.enableZanwo !== false && zanwo.registerCommands(qtool)
+  config.enablePoke !== false && poke.registerCommand(qtool)
+  config.enableStick !== false && stick.registerCommand(qtool)
+  config.enableVoice !== false && voice.registerCommands(qtool)
+  config.enableSign !== false && config.signMode === SignMode.Manual && sign.registerCommands(qtool)
+
+  if (config.stickMode !== StickMode.Off && config.enableStick !== false) {
     ctx.middleware(async (session, next) => {
-      await stick.processMessage(session);
-      return next();
-    });
+      await stick.processMessage(session)
+      return next()
+    })
   }
-  if (config.enabled) {
-    ctx.on('notice', async (session) => {
-      await poke.processNotice(session);
-    });
+  if (config.enabled && config.enablePoke !== false) {
+    ctx.on('notice', poke.processNotice.bind(poke))
   }
 
   ctx.on('dispose', () => {
