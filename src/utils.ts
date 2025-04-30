@@ -1,7 +1,7 @@
 import { Session, h } from 'koishi';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
 /**
  * 工具函数集合

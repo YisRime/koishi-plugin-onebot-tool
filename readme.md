@@ -32,9 +32,11 @@ OneBot 工具集，实现自动点赞、群打卡、拍一拍和表情回应等�
 | `{username}` | 用户昵称 | `你好，{username}！` |
 | `{hitokoto:参数}` | 随机一言（直接传递参数） | `{hitokoto:c=a&min_length=10}` |
 | `{image:URL}` | 显示图片 | `{image:URL}` |
-| `{~}` | 分开发送内容 | `{~}` |
+| `{pixiv}` | 随机Pixiv插画（以图片形式发送） | `{pixiv}` |
+| `{~}` | 分开发送内容（分段发送） | `插画来啦~{~}{pixiv}` |
 
-一言参数请参考[一言API文档](https://developer.hitokoto.cn/sentence/)
+> - `{hitokoto}` 支持传递参数，详见[一言API文档](https://developer.hitokoto.cn/sentence/)
+> - `{pixiv}` 会自动从配置的 Pixiv 图片链接列表中随机选取一张插画并以图片形式发送（如需自定义图片库，可配置 `pixivUrl` 选项）
 
 ### 表情回复功能
 
@@ -102,6 +104,20 @@ OneBot 工具集，实现自动点赞、群打卡、拍一拍和表情回应等�
 
 ## 插件配置
 
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `autoLike` | 是否启用每日自动点赞 | `false` |
+| `signMode` | 群打卡模式（off/manual/auto） | `off` |
+| `stickMode` | 表情回复模式（off/keyword/emoji/all） | `off` |
+| `enabled` | 启用自动响应拍一拍 | `true` |
+| `interval` | 拍一拍响应间隔（毫秒） | `1000` |
+| `cdTime` | 命令冷却时间（秒） | `10` |
+| `maxTimes` | 单次拍一拍最大次数 | `3` |
+| `actionInterval` | 连续拍一拍间隔（毫秒） | `500` |
+| `keywordEmojis` | 关键词触发的表情回应配置 | `[{"keyword":"点赞","emojiId":"76"}]` |
+| `responses` | 拍一拍响应列表 | 见下方示例 |
+| `pixivUrl` | Pixiv图片链接json下载地址 | `https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json` |
+
 ```yaml
 autoLike: true         # 启用每日自动点赞
 stickMode: 'off'       # 表情回复模式：'off'(关闭)、'keyword'(仅关键词)、'emoji'(仅同表情)、'all'(二者)
@@ -133,3 +149,19 @@ responses:             # 拍一拍响应列表
 4. 当群成员发送包含表情的消息时，机器人会根据表情回复模式自动添加相应的表情回应
 5. 也可以配置关键词触发表情回应，当消息中包含特定关键词时添加对应表情
 6. 使用 `stick` 命令可手动为消息添加表情回应，支持多种表情组合
+
+## 常见问题与注意事项
+
+- **Pixiv图片无法显示？**
+  - 插件默认使用 GitHub 上的 pixiv.json 图片链接库，若需自定义图片库，请将图片直链列表（JSON数组）上传至可访问的服务器，并在配置中设置 `pixivUrl`。
+  - Pixiv 图片请求已自动添加 UA 和 Referer，部分图片可能因防盗链失效，建议定期更新图片库。
+- **拍一拍响应无效？**
+  - 请确保已启用拍一拍自动响应（`enabled: true`），并检查响应间隔（`interval`）和命令冷却时间（`cdTime`）设置。
+- **表情回复不生效？**
+  - 检查表情回复模式（`stickMode`）及关键词配置，确保消息内容符合触发条件。
+- **自动点赞/打卡未生效？**
+  - 需安装并启用 `koishi-plugin-cron` 插件以支持定时任务。
+
+## 贡献与反馈
+
+欢迎提交 Issue 或 PR 参与插件完善！如有建议或问题可加群交流。

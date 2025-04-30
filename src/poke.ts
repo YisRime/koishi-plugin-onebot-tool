@@ -117,23 +117,38 @@ export class Poke {
     if (hitokotoMatches.length > 0) {
       hitokotoContents = await Promise.all(
         hitokotoMatches.map(match =>
-          this.getHitokoto(match[1] || '')
+          this.getHitokoto(match[1])
             .then(content => ({ pattern: match[0], content }))
         )
       );
     }
-    // 如果有pixiv占位符，每次直接读取文件并随机选取
+    // 如果有pixiv占位符，下载图片并转base64
     let pixivContents: {pattern: string, content: string}[] = [];
     if (pixivMatches.length > 0) {
-      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.pixivUrl, this.ctx.logger('poke'));
-      pixivContents = await Promise.all(
-        pixivMatches.map(async match => {
-          const url = Array.isArray(arr) && arr.length > 0
-            ? arr[Math.floor(Math.random() * arr.length)]
-            : '';
-          return { pattern: match[0], content: url ? `<image url="${url}"/>` : '' };
-        })
-      );
+      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.pixivUrl, this.ctx.logger);
+      pixivContents = await Promise.all(pixivMatches.map(async match => {
+        let content = '';
+        if (Array.isArray(arr) && arr.length > 0) {
+          const candidate = arr[Math.floor(Math.random() * arr.length)];
+          try {
+            const res = await fetch(candidate, {
+              headers: {
+                'Referer': 'https://www.pixiv.net/',
+              }
+            });
+            if (res.ok) {
+              const buffer = Buffer.from(await res.arrayBuffer());
+              const ext = candidate.split('.').pop()?.toLowerCase() || 'jpg';
+              const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+              const base64 = buffer.toString('base64');
+              content = `<image src="base64://${base64}" type="${mime}"/>`;
+            }
+          } catch (e) {
+            this.ctx.logger.error('图片发送失败:', e);
+          }
+        }
+        return { pattern: match[0], content };
+      }));
     }
     // 一次性替换所有占位符
     let result = content
@@ -219,7 +234,6 @@ export class Poke {
           }
           return '';
         } catch (error) {
-          this.ctx.logger('poke').warn('拍一拍失败:', error);
           return;
         }
       });
@@ -250,16 +264,15 @@ export class Poke {
         await session.execute(response.content);
         delete session._responseTriggered;
       } else {
-        // 处理占位符
-        const processedContent = await this.replacePlaceholders(response.content, session);
-        const segments = processedContent.split('{~}');
+        // 优先处理{~}占位符，分段后每段独立异步处理和发送
+        const segments = response.content.split('{~}');
         for (const seg of segments) {
-          await session.sendQueued(h.parse(seg, session));
+          const processedContent = await this.replacePlaceholders(seg, session);
+          await session.sendQueued(h.parse(processedContent, session));
         }
       }
       return true;
     } catch (error) {
-      this.ctx.logger('poke').warn('拍一拍响应失败:', error);
       return false;
     }
   }
