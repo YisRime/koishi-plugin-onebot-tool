@@ -227,7 +227,10 @@ export class Poke {
       } else {
         // 处理占位符
         const processedContent = await this.replacePlaceholders(response.content, session);
-        await session.sendQueued(h.parse(processedContent, session));
+        const segments = processedContent.split('{~}');
+        for (const seg of segments) {
+          await session.sendQueued(h.parse(seg, session));
+        }
       }
       return true;
     } catch (error) {

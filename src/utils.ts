@@ -1,4 +1,7 @@
 import { Session, h } from 'koishi';
+import { readFile, writeFile } from 'fs/promises';
+import { existsSync, mkdirSync } from 'fs';
+import { resolve, dirname } from 'path';
 
 /**
  * 工具函数集合
@@ -39,5 +42,72 @@ export const utils = {
       }, delay)
     } catch (error) {
     }
+  },
+
+  /**
+   * 读取所有模块数据
+   * @param baseDir - 基础目录
+   * @param logger - 日志记录器
+   * @returns 包含所有模块数据的对象
+   */
+  async getAllModuleData(baseDir: string, logger: any): Promise<Record<string, string[]>> {
+    const filePath = resolve(baseDir, 'data', 'onebot-tool.json');
+    if (!existsSync(filePath)) {
+      return {};
+    }
+
+    try {
+      const content = await readFile(filePath, 'utf8');
+      const data = JSON.parse(content);
+      return typeof data === 'object' && data !== null ? data : {};
+    } catch (error) {
+      logger.error('读取数据文件失败:', error);
+      return {};
+    }
+  },
+
+  /**
+   * 保存所有模块数据
+   * @param baseDir - 基础目录
+   * @param data - 要保存的数据
+   * @param logger - 日志记录器
+   * @returns 是否保存成功
+   */
+  async saveAllModuleData(baseDir: string, data: Record<string, string[]>, logger: any): Promise<boolean> {
+    const filePath = resolve(baseDir, 'data', 'onebot-tool.json');
+
+    try {
+      await writeFile(filePath, JSON.stringify(data, null, 2));
+      return true;
+    } catch (error) {
+      logger.error('保存数据文件失败:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 加载指定模块的数据
+   * @param baseDir - 基础目录
+   * @param moduleName - 模块名称
+   * @param logger - 日志记录器
+   * @returns 模块数据数组
+   */
+  async loadModuleData(baseDir: string, moduleName: string, logger: any): Promise<string[]> {
+    const allData = await this.getAllModuleData(baseDir, logger);
+    return Array.isArray(allData[moduleName]) ? allData[moduleName] : [];
+  },
+
+  /**
+   * 保存指定模块的数据
+   * @param baseDir - 基础目录
+   * @param moduleName - 模块名称
+   * @param data - 要保存的数据
+   * @param logger - 日志记录器
+   * @returns 是否保存成功
+   */
+  async saveModuleData(baseDir: string, moduleName: string, data: string[], logger: any): Promise<boolean> {
+    const allData = await this.getAllModuleData(baseDir, logger);
+    allData[moduleName] = data;
+    return await this.saveAllModuleData(baseDir, allData, logger);
   }
 }

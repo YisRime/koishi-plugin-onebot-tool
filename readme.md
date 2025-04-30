@@ -31,7 +31,8 @@ OneBot 工具集，实现自动点赞、群打卡、拍一拍和表情回应等�
 | `{at}` | 自动@触发拍一拍的用户 | `{at}不要拍我啦！` |
 | `{username}` | 用户昵称/用户名 | `你好，{username}！` |
 | `{hitokoto:参数}` | 随机一言（直接传递参数） | `{hitokoto:c=a&min_length=10}` |
-| `{image:URL}` | 显示图片 | `{image:https://api.sretna.cn/api/anime.php}` |
+| `{image:URL}` | 显示图片 | `{image:URL}` |
+| `{~}` | 分开发送前后内容 | `{~}` |
 
 一言参数请参考[一言API文档](https://developer.hitokoto.cn/sentence/)
 
@@ -118,9 +119,6 @@ responses:             # 拍一拍响应列表
     weight: 0          # 触发概率权重(0-100)
   - type: 'message'
     content: '{hitokoto}'
-    weight: 0
-  - type: 'message'
-    content: '{image:https://api.sretna.cn/api/anime.php}'
     weight: 0
   - type: 'command'
     content: 'poke'

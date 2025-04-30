@@ -1,7 +1,4 @@
 import { Context } from 'koishi'
-import { resolve } from 'path'
-import { readFile, writeFile } from 'fs/promises'
-import { existsSync } from 'fs'
 import { Config } from './index'
 import { utils } from './utils'
 
@@ -12,8 +9,8 @@ import { utils } from './utils'
 export class Zanwo {
   /** 点赞目标用户ID集合 */
   private targets: Set<string> = new Set()
-  /** 点赞列表文件路径 */
-  private filePath: string
+  /** 模块名称，用于数据存储 */
+  private moduleName: string = 'zanwo'
   /** 日志记录器 */
   private logger: any
   /** Koishi上下文 */
@@ -34,7 +31,6 @@ export class Zanwo {
     this.ctx = ctx
     this.config = config
     this.logger = ctx.logger('zanwo')
-    this.filePath = resolve(ctx.baseDir, 'data', 'zanwo.json')
     this.loadTargetsFromFile().catch(err => this.logger.error('加载点赞列表失败:', err))
     this.startAutoLikeTimer()
   }
@@ -44,14 +40,8 @@ export class Zanwo {
    * @returns Promise 加载完成的Promise
    */
   private async loadTargetsFromFile(): Promise<void> {
-    if (!existsSync(this.filePath)) return
-    try {
-      const data = JSON.parse(await readFile(this.filePath, 'utf8'))
-      this.targets = new Set(Array.isArray(data) ? data : [])
-    } catch (error) {
-      this.logger.error('加载点赞列表失败:', error)
-      this.targets = new Set()
-    }
+    const data = await utils.loadModuleData(this.ctx.baseDir, this.moduleName, this.logger)
+    this.targets = new Set(data)
   }
 
   /**
@@ -105,8 +95,7 @@ export class Zanwo {
       const isEmpty = this.targets.size === 0
       if (!isEmpty) {
         this.targets.clear()
-        await writeFile(this.filePath, JSON.stringify([...this.targets]))
-          .catch(error => this.logger.error('保存点赞列表失败:', error))
+        await utils.saveModuleData(this.ctx.baseDir, this.moduleName, [...this.targets], this.logger)
       }
       return !isEmpty
     }
@@ -115,8 +104,7 @@ export class Zanwo {
       ? (this.targets.add(userId), true)
       : this.targets.delete(userId)
     if (result) {
-      await writeFile(this.filePath, JSON.stringify([...this.targets]))
-        .catch(error => this.logger.error('保存点赞列表失败:', error))
+      await utils.saveModuleData(this.ctx.baseDir, this.moduleName, [...this.targets], this.logger)
     }
     return result
   }

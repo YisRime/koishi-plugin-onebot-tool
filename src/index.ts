@@ -148,7 +148,6 @@ export const Config: Schema<Config> = Schema.intersect([
     })).default([
       { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
       { type: 'message', content: '{hitokoto}', weight: 0 },
-      { type: 'message', content: '{image:https://api.sretna.cn/api/anime.php}', weight: 0 },
       { type: 'command', content: 'poke', weight: 100 }
     ]).description('响应列表').role('table')
   }).description('拍一拍配置')
@@ -169,9 +168,7 @@ export function apply(ctx: Context, config: Config) {
   poke.registerCommand()
   stick.registerCommand()
 
-  if (config.signMode !== SignMode.Manual) {
-    ctx.logger('sign').info('当前模式不是手动模式，不注册群打卡命令')
-  } else {
+  if (config.signMode === SignMode.Manual) {
     sign.registerCommands()
   }
   if (config.stickMode !== StickMode.Off) {
