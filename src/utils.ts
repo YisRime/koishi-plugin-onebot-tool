@@ -109,5 +109,37 @@ export const utils = {
     const allData = await this.getAllModuleData(baseDir, logger);
     allData[moduleName] = data;
     return await this.saveAllModuleData(baseDir, allData, logger);
+  },
+
+  /**
+   * 获取Pixiv图片链接数组（本地无则自动下载）
+   * @param baseDir 基础目录
+   * @param url 下载链接
+   * @param logger 日志
+   */
+  async getPixivLinks(baseDir: string, url: string, logger: any): Promise<string[]> {
+    const filePath = resolve(baseDir, 'data', 'pixiv.json');
+    if (!existsSync(filePath)) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error(`下载失败: ${res.status}`);
+        const text = await res.text();
+        await writeFile(filePath, text, 'utf8');
+      } catch (e) {
+        logger.error('下载JSON文件失败:', e);
+        return [];
+      }
+    }
+    try {
+      const content = await readFile(filePath, 'utf8');
+      const arr = JSON.parse(content);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      logger.error('读取Pixiv链接失败:', e);
+      return [];
+    }
   }
 }

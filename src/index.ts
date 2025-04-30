@@ -99,6 +99,8 @@ export interface Config {
       /** 回复的表情ID或名称 */
       emojiId: string;
     }>
+    /** Pixiv图片链接json下载地址 */
+    pixivUrl?: string
 }
 
 /**
@@ -137,6 +139,9 @@ export const Config: Schema<Config> = Schema.intersect([
       .description('启用自动响应').default(true),
     interval: Schema.number()
       .description('自动响应间隔（毫秒）').default(1000).min(0),
+    pixivUrl: Schema.string()
+      .description('Pixiv图片目录下载地址')
+      .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
         Schema.const('command').description('执行命令'),
@@ -148,7 +153,8 @@ export const Config: Schema<Config> = Schema.intersect([
     })).default([
       { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
       { type: 'message', content: '{hitokoto}', weight: 0 },
-      { type: 'command', content: 'poke', weight: 100 }
+      { type: 'message', content: '你呆在此地不要走动，我去给你找张插画来~{~}{pixiv}', weight: 100 },
+      { type: 'command', content: 'poke', weight: 0 }
     ]).description('响应列表').role('table')
   }).description('拍一拍配置')
 ])

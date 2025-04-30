@@ -33,6 +33,8 @@ export class Poke {
   private totalWeight: number = 0;
   /** 命令冷却时间缓存 */
   private commandCooldown = new Map<string, number>();
+  /** Pixiv链接下载地址 */
+  private pixivUrl: string;
 
   /**
    * 创建拍一拍处理器
@@ -50,6 +52,7 @@ export class Poke {
         this.totalWeight = 100;
       }
     }
+    this.pixivUrl = config.pixivUrl || 'https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json';
   }
 
   /**
@@ -107,6 +110,8 @@ export class Poke {
     }
     // 收集所有一言占位符
     const hitokotoMatches = [...content.matchAll(/{hitokoto(?::([^}]*))?}/g)];
+    // 收集所有pixiv占位符
+    const pixivMatches = [...content.matchAll(/{pixiv}/g)];
     // 如果有一言占位符，并行获取所有一言内容
     let hitokotoContents: {pattern: string, content: string}[] = [];
     if (hitokotoMatches.length > 0) {
@@ -115,6 +120,19 @@ export class Poke {
           this.getHitokoto(match[1] || '')
             .then(content => ({ pattern: match[0], content }))
         )
+      );
+    }
+    // 如果有pixiv占位符，每次直接读取文件并随机选取
+    let pixivContents: {pattern: string, content: string}[] = [];
+    if (pixivMatches.length > 0) {
+      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.pixivUrl, this.ctx.logger('poke'));
+      pixivContents = await Promise.all(
+        pixivMatches.map(async match => {
+          const url = Array.isArray(arr) && arr.length > 0
+            ? arr[Math.floor(Math.random() * arr.length)]
+            : '';
+          return { pattern: match[0], content: url ? `<image url="${url}"/>` : '' };
+        })
       );
     }
     // 一次性替换所有占位符
@@ -128,6 +146,13 @@ export class Poke {
     // 替换所有一言占位符
     if (hitokotoContents.length > 0) {
       result = hitokotoContents.reduce(
+        (text, { pattern, content }) => text.replace(pattern, content),
+        result
+      );
+    }
+    // 替换所有pixiv占位符
+    if (pixivContents.length > 0) {
+      result = pixivContents.reduce(
         (text, { pattern, content }) => text.replace(pattern, content),
         result
       );
