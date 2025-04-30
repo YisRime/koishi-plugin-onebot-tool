@@ -116,7 +116,7 @@ OneBot 工具集，实现自动点赞、群打卡、拍一拍和表情回应等�
 | `actionInterval` | 连续拍一拍间隔（毫秒） | `500` |
 | `keywordEmojis` | 关键词触发的表情回应配置 | `[{"keyword":"点赞","emojiId":"76"}]` |
 | `responses` | 拍一拍响应列表 | 见下方示例 |
-| `pixivUrl` | Pixiv图片链接json下载地址 | `https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json` |
+| `pixivUrl` | Pixiv图集地址 | `https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json` |
 
 ```yaml
 autoLike: true         # 启用每日自动点赞
@@ -136,9 +136,12 @@ responses:             # 拍一拍响应列表
   - type: 'message'
     content: '{hitokoto}'
     weight: 0
+  - type: 'message'
+    content: '你呆在此地不要走动，我去给你找张插画来~{~}{pixiv}'
+    weight: 100
   - type: 'command'
     content: 'poke'
-    weight: 100
+    weight: 0
 ```
 
 ## 使用方法
@@ -154,14 +157,10 @@ responses:             # 拍一拍响应列表
 
 - **Pixiv图片无法显示？**
   - 插件默认使用 GitHub 上的 pixiv.json 图片链接库，若需自定义图片库，请将图片直链列表（JSON数组）上传至可访问的服务器，并在配置中设置 `pixivUrl`。
-  - Pixiv 图片请求已自动添加 UA 和 Referer，部分图片可能因防盗链失效，建议定期更新图片库。
+  - Pixiv 图片请求已自动添加 Referer，部分图片可能失效，建议定期更新图片库。
 - **拍一拍响应无效？**
   - 请确保已启用拍一拍自动响应（`enabled: true`），并检查响应间隔（`interval`）和命令冷却时间（`cdTime`）设置。
 - **表情回复不生效？**
   - 检查表情回复模式（`stickMode`）及关键词配置，确保消息内容符合触发条件。
 - **自动点赞/打卡未生效？**
   - 需安装并启用 `koishi-plugin-cron` 插件以支持定时任务。
-
-## 贡献与反馈
-
-欢迎提交 Issue 或 PR 参与插件完善！如有建议或问题可加群交流。

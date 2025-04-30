@@ -140,7 +140,7 @@ export const Config: Schema<Config> = Schema.intersect([
     interval: Schema.number()
       .description('自动响应间隔（毫秒）').default(1000).min(0),
     pixivUrl: Schema.string()
-      .description('Pixiv图片目录下载地址')
+      .description('Pixiv图集地址').role('link')
       .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
