@@ -33,7 +33,7 @@ export class Sign {
     this.config = config
     this.logger = logger
     this.loadTargetsFromFile().catch(err => this.logger.error('加载群打卡列表失败:', err))
-    this.startAutoSignTimer()
+    if (this.config.signMode === SignMode.Auto) this.startAutoSignTimer()
   }
 
   /**
@@ -52,8 +52,7 @@ export class Sign {
     this.cronJob?.dispose()
     this.timer && clearInterval(this.timer)
     this.cronJob = this.timer = null
-    if (this.config.signMode === SignMode.Off) return
-    if (this.config.signMode === SignMode.Manual && !this.targets.size) return
+    if (this.config.signMode !== SignMode.Auto) return
     if (typeof this.ctx.cron === 'function') {
       this.cronJob = this.ctx.cron('0 0 * * *', () => this.executeAutoSign())
       this.logger.info('已设置每日自动群打卡定时任务')

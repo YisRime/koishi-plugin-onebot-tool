@@ -1,5 +1,5 @@
 import { Context } from 'koishi'
-import { Config } from './index'
+import { Config, ZanwoMode } from './index'
 import { utils } from './utils'
 
 /**
@@ -26,7 +26,7 @@ export class Zanwo {
     this.config = config
     this.logger = logger
     this.loadTargetsFromFile().catch(err => this.logger.error('加载点赞列表失败:', err))
-    this.startAutoLikeTimer()
+    if (this.config.zanwoMode === ZanwoMode.Auto) this.startAutoLikeTimer()
   }
 
   /**
@@ -45,7 +45,7 @@ export class Zanwo {
     this.cronJob?.dispose()
     this.timer && clearInterval(this.timer)
     this.cronJob = this.timer = null
-    if (!this.config.autoLike || !this.targets.size) return
+    if (this.config.zanwoMode !== ZanwoMode.Auto || !this.targets.size) return
     if (typeof this.ctx.cron === 'function') {
       this.cronJob = this.ctx.cron('0 0 * * *', () => this.executeAutoLike())
       this.logger.info('已设置每日自动点赞定时任务')
@@ -126,9 +126,9 @@ export class Zanwo {
       await utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
       return ''
     }
-    const zanwo = parentCmd.subcommand('zanwo', '自动点赞')
+    const zanwo = parentCmd.subcommand('zanwo', '点赞')
       .alias('赞我')
-      .usage('自动给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表\nzanwo.clear - 清空点赞列表')
+      .usage('给你点赞\nzanwo - 为自己点赞\nzanwo.user @用户 - 为指定用户点赞\nzanwo.list - 查看点赞列表\nzanwo.add @用户 - 添加到点赞列表\nzanwo.remove @用户 - 从点赞列表移除\nzanwo.all - 立即点赞列表\nzanwo.clear - 清空点赞列表')
       .action(async ({ session }) => handleReply(session, (await this.sendLike(session, session.userId)) ? `点赞完成，记得回赞哦~` : '点赞失败，请尝试添加好友'))
     zanwo.subcommand('.list', { authority: 3 })
       .action(async () => {

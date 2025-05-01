@@ -29,7 +29,6 @@ declare module "koishi" {
     /** 通知事件 */
     notice(session: Session): void;
   }
-
   interface Session {
     /** 拍一拍目标ID */
     targetId?: string;
@@ -39,28 +38,28 @@ declare module "koishi" {
 }
 
 /**
- * 表情回应模式
+ * 模式定义
  */
 export enum StickMode {
-  /** 关闭表情回应 */
   Off = 'off',
-  /** 仅回应关键词 */
   KeywordOnly = 'keyword',
-  /** 仅处理包含表情 */
   EmojiOnly = 'emoji',
-  /** 处理所有表情 */
-  All = 'all'
+  All = 'all',
+  Manual = 'manual'
 }
-
-/**
- * 打卡模式
- */
 export enum SignMode {
-  /** 关闭打卡功能 */
   Off = 'off',
-  /** 手动模式：使用手动添加的群列表 */
   Manual = 'manual',
-  /** 自动模式：自动获取所有群 */
+  Auto = 'auto'
+}
+export enum ZanwoMode {
+  Off = 'off',
+  Manual = 'manual',
+  Auto = 'auto'
+}
+export enum PokeMode {
+  Off = 'off',
+  Manual = 'manual',
   Auto = 'auto'
 }
 
@@ -68,22 +67,22 @@ export enum SignMode {
  * 插件配置接口
  */
 export interface Config {
-    /** 是否启用每日自动点赞 */
-    autoLike: boolean
     /** 打卡模式设置 */
-    signMode?: SignMode
-    /** 是否启用拍一拍自动响应 */
-    enabled: boolean
+    signMode: SignMode
+    /** 赞我模式设置 */
+    zanwoMode: ZanwoMode
+    /** 拍一拍模式设置 */
+    pokeMode: PokeMode
     /** 拍一拍响应间隔(毫秒) */
-    interval?: number
+    interval: number
     /** 表情回应模式 */
-    stickMode?: StickMode
+    stickMode: StickMode
     /** 单次拍一拍最大次数 */
-    maxTimes?: number
+    maxTimes: number
     /** 连续拍一拍间隔(毫秒) */
-    actionInterval?: number
+    actionInterval: number
     /** 命令冷却时间(秒) */
-    cdTime?: number
+    cdTime: number
     /** 拍一拍响应列表 */
     responses?: Array<{
       /** 响应类型：命令或消息 */
@@ -102,16 +101,8 @@ export interface Config {
     }>
     /** Pixiv图片链接json下载地址 */
     imagesUrl?: string
-    /** 是否启用 Zanwo 命令 */
-    enableZanwo?: boolean
-    /** 是否启用 Poke 命令 */
-    enablePoke?: boolean
-    /** 是否启用 Stick 命令 */
-    enableStick?: boolean
-    /** 是否启用 Sign 命令 */
-    enableSign?: boolean
     /** 是否启用 Voice 命令 */
-    enableVoice?: boolean
+    enableVoice: boolean
 }
 
 /**
@@ -119,46 +110,41 @@ export interface Config {
  */
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
-    enableZanwo: Schema.boolean().description('启用赞我').default(true),
-    enableSign: Schema.boolean().description('启用打卡').default(true),
-    enablePoke: Schema.boolean().description('启用拍一拍').default(true),
-    enableStick: Schema.boolean().description('启用表情回应').default(true),
-    enableVoice: Schema.boolean().description('启用 AI 语音').default(true)
-  }).description('开关配置'),
-  Schema.object({
-    autoLike: Schema.boolean()
-      .description('启用自动点赞').default(false),
+    enableVoice: Schema.boolean().description('启用 AI 语音').default(true),
+    zanwoMode: Schema.union([
+      Schema.const(ZanwoMode.Off).description('关闭'),
+      Schema.const(ZanwoMode.Manual).description('手动'),
+      Schema.const(ZanwoMode.Auto).description('自动')
+    ]).description('点赞模式').default(ZanwoMode.Manual),
     signMode: Schema.union([
       Schema.const(SignMode.Off).description('关闭'),
       Schema.const(SignMode.Manual).description('手动'),
       Schema.const(SignMode.Auto).description('自动')
-    ]).description('群打卡模式').default(SignMode.Off),
+    ]).description('群打卡模式').default(SignMode.Manual),
+    pokeMode: Schema.union([
+      Schema.const(PokeMode.Off).description('关闭'),
+      Schema.const(PokeMode.Manual).description('手动'),
+      Schema.const(PokeMode.Auto).description('自动')
+    ]).description('拍一拍模式').default(PokeMode.Manual),
     stickMode: Schema.union([
       Schema.const(StickMode.Off).description('关闭'),
+      Schema.const(StickMode.Manual).description('手动'),
       Schema.const(StickMode.All).description('二者'),
       Schema.const(StickMode.KeywordOnly).description('仅关键词'),
       Schema.const(StickMode.EmojiOnly).description('仅同表情')
-    ]).description('表情回应模式').default(StickMode.Off),
-    keywordEmojis: Schema.array(Schema.object({
-      keyword: Schema.string().description('触发关键词'),
-      emojiId: Schema.string().description('表情名称/ID')
-    })).default([
-      { keyword: '点赞', emojiId: '76' }
-    ]).description('关键词列表').role('table')
-  }).description('工具配置'),
+    ]).description('表情回应模式').default(StickMode.Manual)
+  }).description('功能配置'),
   Schema.object({
     cdTime: Schema.number()
-      .description('命令冷却时间（秒）').default(10).min(0),
+      .description('拍一拍冷却时间（秒）').default(10).min(0),
     maxTimes: Schema.number()
-      .description('单次次数限制').default(3).min(1).max(200),
+      .description('拍一拍单次限制').default(3).min(1).max(200),
     actionInterval: Schema.number()
-      .description('拍一拍间隔（毫秒）').default(500).min(100),
-    enabled: Schema.boolean()
-      .description('启用自动响应').default(true),
+      .description('拍一拍单次间隔（毫秒）').default(500).min(100),
     interval: Schema.number()
-      .description('自动响应间隔（毫秒）').default(1000).min(0),
+      .description('拍一拍响应间隔（毫秒）').default(1000).min(0),
     imagesUrl: Schema.string()
-      .description('图片数据地址').role('link')
+      .description('占位符"{pixiv}"数据地址').role('link')
       .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
@@ -166,15 +152,18 @@ export const Config: Schema<Config> = Schema.intersect([
         Schema.const('message').description('发送消息')
       ]).description('响应类型'),
       content: Schema.string().description('响应内容'),
-      weight: Schema.number()
-        .description('触发权重').default(50).min(0).max(100)
+      weight: Schema.number().description('触发权重').default(50).min(0).max(100)
     })).default([
       { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
       { type: 'message', content: '{hitokoto}', weight: 0 },
       { type: 'message', content: '稍等哦~插画一会就来~{~}{pixiv}', weight: 100 },
       { type: 'command', content: 'poke', weight: 0 }
-    ]).description('响应列表').role('table')
-  }).description('拍一拍配置')
+    ]).description('拍一拍响应列表').role('table'),
+    keywordEmojis: Schema.array(Schema.object({
+      keyword: Schema.string().description('触发关键词'),
+      emojiId: Schema.string().description('表情名称/ID')
+    })).default([{ keyword: '点赞', emojiId: '76' }]).description('表情回应关键词列表').role('table')
+  }).description('响应配置')
 ])
 
 /**
@@ -193,20 +182,18 @@ export function apply(ctx: Context, config: Config) {
   const qtool = ctx.command('qtool', 'QQ 工具')
     .usage('点赞、打卡、拍一拍、表情回应和AI语音')
 
-  config.enableZanwo !== false && zanwo.registerCommands(qtool)
-  config.enablePoke !== false && poke.registerCommand(qtool)
-  config.enableStick !== false && stick.registerCommand(qtool)
   config.enableVoice !== false && voice.registerCommands(qtool)
-  config.enableSign !== false && config.signMode === SignMode.Manual && sign.registerCommands(qtool)
+  if (config.zanwoMode !== ZanwoMode.Off) zanwo.registerCommands(qtool)
+  if (config.pokeMode !== PokeMode.Off) poke.registerCommand(qtool)
+  if (config.stickMode !== StickMode.Off) stick.registerCommand(qtool)
+  if (config.signMode !== SignMode.Off) sign.registerCommands(qtool)
 
-  if (config.stickMode !== StickMode.Off && config.enableStick !== false) {
+  if (config.pokeMode === PokeMode.Auto) ctx.on('notice', poke.processNotice.bind(poke))
+  if (config.stickMode !== StickMode.Off && config.stickMode !== StickMode.Manual) {
     ctx.middleware(async (session, next) => {
       await stick.processMessage(session)
       return next()
     })
-  }
-  if (config.enabled && config.enablePoke !== false) {
-    ctx.on('notice', poke.processNotice.bind(poke))
   }
 
   ctx.on('dispose', () => {

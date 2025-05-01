@@ -101,7 +101,7 @@ export class Poke {
         if (Array.isArray(arr) && arr.length) {
           const candidate = arr[Math.floor(Math.random() * arr.length)];
           try {
-            this.logger.info('发送自定义图片: ', candidate);
+            this.logger.info('发送图片:', candidate);
             const res = await fetch(candidate, { headers: { 'Referer': 'https://www.pixiv.net/' } });
             if (res.ok) {
               const buffer = Buffer.from(await res.arrayBuffer());
