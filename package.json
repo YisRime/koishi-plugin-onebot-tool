@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-onebot-tool",
   "description": "OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音等功能，可独立开关和自由配置",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
   ],
