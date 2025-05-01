@@ -101,7 +101,7 @@ export interface Config {
       emojiId: string;
     }>
     /** Pixiv图片链接json下载地址 */
-    pixivUrl?: string
+    imagesUrl?: string
     /** 是否启用 Zanwo 命令 */
     enableZanwo?: boolean
     /** 是否启用 Poke 命令 */
@@ -157,8 +157,8 @@ export const Config: Schema<Config> = Schema.intersect([
       .description('启用自动响应').default(true),
     interval: Schema.number()
       .description('自动响应间隔（毫秒）').default(1000).min(0),
-    pixivUrl: Schema.string()
-      .description('Pixiv图集地址').role('link')
+    imagesUrl: Schema.string()
+      .description('图片数据地址').role('link')
       .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),
     responses: Schema.array(Schema.object({
       type: Schema.union([

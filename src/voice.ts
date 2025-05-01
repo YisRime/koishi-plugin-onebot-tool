@@ -68,9 +68,9 @@ export class Voice {
     }
 
     /**
-     * 注册 airec 命令
+     * 注册 aisay 命令
      */
-    const voice = parentCmd.subcommand('airec <character:string> <text:text>', '发送AI语音')
+    const voice = parentCmd.subcommand('aisay <character:string> <text:text>', '发送AI语音')
       .channelFields(['guildId'])
       .action(async ({ session }, character, text) => {
         if (!await checkParams(session, character, text)) return ''
@@ -112,7 +112,7 @@ export class Voice {
           return '语音生成失败'
         }
       })
-    voice.subcommand('.preview <key:string>', '语音角色预览')
+    voice.subcommand('.view <key:string>', '语音角色预览')
       .channelFields(['guildId'])
       .action(async ({ session }, key) => {
         if (!key) {

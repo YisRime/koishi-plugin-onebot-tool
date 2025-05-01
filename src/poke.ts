@@ -22,7 +22,7 @@ export class Poke {
   private cache = new Map<string, number>();
   private totalWeight = 0;
   private commandCooldown = new Map<string, number>();
-  private pixivUrl: string;
+  private imagesUrl: string;
   private logger: any;
 
   /**
@@ -41,7 +41,7 @@ export class Poke {
         this.totalWeight = 100;
       }
     }
-    this.pixivUrl = config.pixivUrl || 'https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json';
+    this.imagesUrl = config.imagesUrl || 'https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json';
   }
 
   /**
@@ -95,12 +95,13 @@ export class Poke {
       : [];
     let pixivContents = [];
     if (pixivMatches.length) {
-      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.pixivUrl, this.logger);
+      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.imagesUrl, this.logger);
       pixivContents = await Promise.all(pixivMatches.map(async m => {
         let content = '';
         if (Array.isArray(arr) && arr.length) {
           const candidate = arr[Math.floor(Math.random() * arr.length)];
           try {
+            this.logger.info('发送自定义图片: ', candidate);
             const res = await fetch(candidate, { headers: { 'Referer': 'https://www.pixiv.net/' } });
             if (res.ok) {
               const buffer = Buffer.from(await res.arrayBuffer());
