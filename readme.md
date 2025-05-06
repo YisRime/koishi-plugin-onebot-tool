@@ -36,7 +36,7 @@ OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音
 | `{~}` | 分段发送 | `插画来啦~{~}{pixiv}` |
 
 > - `{hitokoto}` 支持传递参数，详见[一言API文档](https://developer.hitokoto.cn/sentence/)
-> - `{pixiv}` 会自动从配置的 Pixiv 图片链接列表中随机选取一张图片发送
+> - `{pixiv}` 会自动从配置的图片列表中随机选取一张图片发送
 
 ### 表情回应
 
@@ -129,7 +129,7 @@ OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音
 | `actionInterval` | 连续拍一拍间隔（毫秒） | `500` |
 | `keywordEmojis` | 关键词触发的表情回应配置 | `[{"keyword":"点赞","emojiId":"76"}]` |
 | `responses` | 拍一拍响应列表 | 见下方示例 |
-| `imagesUrl` | 图集地址 | `https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json` |
+| `imagesPath` | 图集地址 | `https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json` |
 
 ```yaml
 autoLike: true         # 启用每日自动点赞
@@ -171,9 +171,8 @@ responses:             # 拍一拍响应列表
 
 - **如何自定义图片数据**
   - 插件默认数据源自于 [Omega Miya](https://github.com/Ailitonia/omega-miya)，本人仅作简单处理。
-  - 若需自定义图片数据，请自行配置 JSON 并置于 `data` 目录，或设置 `imagesUrl` 以直接下载远端数据。
-  - 优先使用本地数据，存在本地文件时不会下载远端数据
-  - 图片数据格式为每行一个图片直链，已自动添加 Referer 请求头，无需特殊处理即可获取 Pixiv 图片。
+  - 若需自定义图片数据，请设置 `imagesPath` 以使用本地文件夹或下载外置链接列表。
+  - 下载 JSON 数据格式为每行一个图片直链，已自动添加 Referer 请求头，无需特殊处理即可获取 Pixiv 图片。
 - **自动点赞/打卡未生效？**
   - 需安装并启用 `koishi-plugin-cron` 插件以支持定时任务，或未到配置的 24H 定时器执行时间。
 - **AI 语音无效？**

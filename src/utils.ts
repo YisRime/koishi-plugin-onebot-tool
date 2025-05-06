@@ -1,7 +1,7 @@
 import { Session, h } from 'koishi';
-import { readFile, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
+import { readFile, writeFile, readdir } from 'fs/promises';
+import { existsSync, statSync } from 'fs';
+import { resolve, extname } from 'path';
 
 /**
  * 工具函数集合
@@ -74,29 +74,60 @@ export const utils = {
   },
 
   /**
-   * 获取Pixiv图片链接数组（本地无则自动下载）
+   * 检查文件是否为图片
    */
-  async getPixivLinks(baseDir: string, url: string, logger: any): Promise<string[]> {
-    const filePath = resolve(baseDir, 'data', 'pixiv.json');
-    if (!existsSync(filePath)) {
+  isImageFile(filename: string): boolean {
+    const ext = extname(filename).toLowerCase();
+    return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+  },
+
+  /**
+   * 获取本地目录中的图片文件列表
+   */
+  async getLocalImages(dirPath: string, logger: any): Promise<string[]> {
+    try {
+      if (!existsSync(dirPath) || !statSync(dirPath).isDirectory()) return [];
+      const files = await readdir(dirPath);
+      const imagePaths = files
+        .filter(file => this.isImageFile(file))
+        .map(file => resolve(dirPath, file));
+      return imagePaths;
+    } catch (e) {
+      logger.error(`读取图片目录失败: ${e.message}`);
+      return [];
+    }
+  },
+
+  /**
+   * 获取Pixiv图片链接数组（支持网络JSON或本地目录）
+   */
+  async getPixivLinks(baseDir: string, path: string, logger: any): Promise<string[]> {
+    // 判断是URL还是本地路径
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      // 处理网络JSON的情况
+      const filePath = resolve(baseDir, 'data', 'pixiv.json');
+      if (!existsSync(filePath)) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000);
+          const res = await fetch(path, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error(`下载失败: ${res.status}`);
+          await writeFile(filePath, await res.text(), 'utf8');
+        } catch (e) {
+          logger.error('下载JSON文件失败:', e);
+          return [];
+        }
+      }
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!res.ok) throw new Error(`下载失败: ${res.status}`);
-        await writeFile(filePath, await res.text(), 'utf8');
+        const arr = JSON.parse(await readFile(filePath, 'utf8'));
+        return Array.isArray(arr) ? arr : [];
       } catch (e) {
-        logger.error('下载JSON文件失败:', e);
+        logger.error('读取Pixiv链接失败:', e);
         return [];
       }
-    }
-    try {
-      const arr = JSON.parse(await readFile(filePath, 'utf8'));
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) {
-      logger.error('读取Pixiv链接失败:', e);
-      return [];
+    } else {
+      return this.getLocalImages(path, logger);
     }
   }
 }

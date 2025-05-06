@@ -1,6 +1,9 @@
 import { Context, h, Session } from "koishi";
 import { Config } from "./index";
 import { utils } from "./utils";
+import { readFile } from "fs/promises";
+import { existsSync } from "fs";
+import { extname } from "path";
 
 declare module 'koishi' {
   interface Session {
@@ -22,7 +25,7 @@ export class Poke {
   private cache = new Map<string, number>();
   private totalWeight = 0;
   private commandCooldown = new Map<string, number>();
-  private imagesUrl: string;
+  private imagesPath: string;
   private logger: any;
 
   /**
@@ -41,7 +44,7 @@ export class Poke {
         this.totalWeight = 100;
       }
     }
-    this.imagesUrl = config.imagesUrl || 'https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json';
+    this.imagesPath = config.imagesPath;
   }
 
   /**
@@ -95,18 +98,32 @@ export class Poke {
       : [];
     let pixivContents = [];
     if (pixivMatches.length) {
-      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.imagesUrl, this.logger);
+      const arr = await utils.getPixivLinks(this.ctx.baseDir, this.imagesPath, this.logger);
       pixivContents = await Promise.all(pixivMatches.map(async m => {
         let content = '';
         if (Array.isArray(arr) && arr.length) {
-          const candidate = arr[Math.floor(Math.random() * arr.length)];
+          const imagePath = arr[Math.floor(Math.random() * arr.length)];
           try {
-            const res = await fetch(candidate, { headers: { 'Referer': 'https://www.pixiv.net/' } });
-            if (res.ok) {
-              const buffer = Buffer.from(await res.arrayBuffer());
-              const ext = candidate.split('.').pop()?.toLowerCase() || 'jpg';
-              const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-              content = `<image src="base64://${buffer.toString('base64')}" type="${mime}"/>`;
+            // 处理本地文件路径
+            if (!imagePath.startsWith('http')) {
+              if (existsSync(imagePath)) {
+                const buffer = await readFile(imagePath);
+                const ext = extname(imagePath).toLowerCase().substring(1) || 'jpg';
+                const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' :
+                             ext === 'webp' ? 'image/webp' : 'image/jpeg';
+                content = `<image src="base64://${buffer.toString('base64')}" type="${mime}"/>`;
+              } else {
+                this.logger.warn(`图片文件不存在: ${imagePath}`);
+              }
+            } else {
+              // 处理网络图片链接
+              const res = await fetch(imagePath, { headers: { 'Referer': 'https://www.pixiv.net/' } });
+              if (res.ok) {
+                const buffer = Buffer.from(await res.arrayBuffer());
+                const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
+                const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                content = `<image src="base64://${buffer.toString('base64')}" type="${mime}"/>`;
+              }
             }
           } catch (e) { this.logger.error('图片发送失败:', e); }
         }

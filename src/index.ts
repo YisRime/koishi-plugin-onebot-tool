@@ -99,8 +99,8 @@ export interface Config {
       /** 回应的表情ID或名称 */
       emojiId: string;
     }>
-    /** Pixiv图片链接json下载地址 */
-    imagesUrl?: string
+    /** Pixiv图片链接地址 */
+    imagesPath?: string
     /** 是否启用 Voice 命令 */
     enableVoice: boolean
 }
@@ -143,8 +143,8 @@ export const Config: Schema<Config> = Schema.intersect([
       .description('拍一拍单次间隔（毫秒）').default(500).min(100),
     interval: Schema.number()
       .description('拍一拍响应间隔（毫秒）').default(1000).min(0),
-    imagesUrl: Schema.string()
-      .description('占位符"{pixiv}"数据地址').role('link')
+    imagesPath: Schema.string()
+      .description('占位符"{pixiv}"数据地址')
       .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),
     responses: Schema.array(Schema.object({
       type: Schema.union([
