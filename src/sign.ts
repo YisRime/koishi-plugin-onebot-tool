@@ -146,18 +146,20 @@ export class Sign {
       return ''
     }
     const sign = parentCmd.subcommand('sign', '群打卡')
-      .usage('群打卡\nsign - 当前群打卡\nsign.group <群号> - 为指定群打卡\nsign.list - 查看打卡列表\nsign.add <群号> - 添加到打卡列表\nsign.remove <群号> - 从打卡列表移除\nsign.all - 立即打卡所有群\nsign.clear - 清空打卡列表')
+      .usage('打卡当前群')
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
         const success = await this.sendGroupSign(session, session.guildId)
         return handleReply(session, success ? `群 ${session.guildId} 打卡成功~` : '群打卡失败')
       })
     sign.subcommand('.list', { authority: 3 })
+      .usage('查看打卡列表')
       .action(async () => {
         const targets = await this.handleTargets('get') as string[]
         return targets.length ? `手动模式 - 当前群打卡列表（共${targets.length}个群）` : '手动模式 - 群打卡列表为空'
       })
     sign.subcommand('.group <target:text>')
+      .usage('打卡指定群')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
@@ -165,12 +167,14 @@ export class Sign {
         return handleReply(session, success ? `群 ${groupId} 打卡成功~` : '群打卡失败')
       })
     sign.subcommand('.all', { authority: 3 })
+      .usage('立即打卡所有群')
       .action(async ({ session }) => {
         await handleReply(session, `已开始群打卡，请稍候...`)
         await this.executeAutoSign(session)
         return '群打卡完成'
       })
     sign.subcommand('.add <target:text>', { authority: 2 })
+      .usage('添加群到打卡列表')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
@@ -178,6 +182,7 @@ export class Sign {
         return handleReply(session, success ? `已添加群 ${groupId} 到打卡列表` : '添加失败')
       })
     sign.subcommand('.remove <target:text>', { authority: 2 })
+      .usage('从打卡列表移除群')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
@@ -185,6 +190,7 @@ export class Sign {
         return handleReply(session, success ? `已从打卡列表移除群 ${groupId}` : '移除失败')
       })
     sign.subcommand('.clear', { authority: 4 })
+      .usage('清空打卡列表')
       .action(async () => {
         await this.handleTargets('clear')
         return '已清空群打卡列表'
