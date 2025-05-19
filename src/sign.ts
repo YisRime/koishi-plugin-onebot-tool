@@ -145,20 +145,20 @@ export class Sign {
       await utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
       return ''
     }
-    const sign = parentCmd.subcommand('sign', '群打卡')
-      .usage('打卡当前群')
+    const sign = parentCmd.subcommand('sign', '打卡功能')
+      .usage('在当前群进行打卡')
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
         const success = await this.sendGroupSign(session, session.guildId)
         return handleReply(session, success ? `群 ${session.guildId} 打卡成功~` : '群打卡失败')
       })
-    sign.subcommand('.list', { authority: 3 })
-      .usage('查看打卡列表')
+    sign.subcommand('.list', '查看列表', { authority: 3 })
+      .usage('查看打卡群列表')
       .action(async () => {
         const targets = await this.handleTargets('get') as string[]
         return targets.length ? `手动模式 - 当前群打卡列表（共${targets.length}个群）` : '手动模式 - 群打卡列表为空'
       })
-    sign.subcommand('.group <target:text>')
+    sign.subcommand('.group <target:text>', '指定打卡')
       .usage('打卡指定群')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
@@ -166,14 +166,14 @@ export class Sign {
         const success = await this.sendGroupSign(session, groupId)
         return handleReply(session, success ? `群 ${groupId} 打卡成功~` : '群打卡失败')
       })
-    sign.subcommand('.all', { authority: 3 })
-      .usage('立即打卡所有群')
+    sign.subcommand('.all', '全部打卡', { authority: 3 })
+      .usage('打卡所有列表中的群')
       .action(async ({ session }) => {
         await handleReply(session, `已开始群打卡，请稍候...`)
         await this.executeAutoSign(session)
         return '群打卡完成'
       })
-    sign.subcommand('.add <target:text>', { authority: 2 })
+    sign.subcommand('.add <target:text>', '添加群', { authority: 2 })
       .usage('添加群到打卡列表')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
@@ -181,7 +181,7 @@ export class Sign {
         const success = await this.handleTargets('add', groupId)
         return handleReply(session, success ? `已添加群 ${groupId} 到打卡列表` : '添加失败')
       })
-    sign.subcommand('.remove <target:text>', { authority: 2 })
+    sign.subcommand('.remove <target:text>', '移除群', { authority: 2 })
       .usage('从打卡列表移除群')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
@@ -189,7 +189,7 @@ export class Sign {
         const success = await this.handleTargets('remove', groupId)
         return handleReply(session, success ? `已从打卡列表移除群 ${groupId}` : '移除失败')
       })
-    sign.subcommand('.clear', { authority: 4 })
+    sign.subcommand('.clear', '清空列表', { authority: 4 })
       .usage('清空打卡列表')
       .action(async () => {
         await this.handleTargets('clear')

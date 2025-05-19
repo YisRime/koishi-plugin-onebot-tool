@@ -145,8 +145,8 @@ export class Poke {
    */
   registerCommand(parentCmd) {
     parentCmd.subcommand('poke [times:number] [target:string]', '拍一拍')
-      .usage('发送拍一拍，可指定次数和目标用户')
-      .example('poke @12345 - 拍用户@12345一次')
+      .usage('发送拍一拍，可指定次数和目标')
+      .example('poke - 拍自己一次')
       .example('poke 3 @12345 - 拍用户@12345三次')
       .action(async ({ session }, times, target) => {
         try {

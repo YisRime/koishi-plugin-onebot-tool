@@ -108,9 +108,9 @@ export class Stick {
   registerCommand(parentCmd) {
     const handleError = (e: any, msg: string) => (this.logger.warn(msg, e), msg.replace(':', ''))
     const stick = parentCmd.subcommand('stick [faceId:string]', '表情回应')
-      .usage('回应表情消息，默认点赞，支持输入多个表情 ID 或名称')
-      .example('stick 76,77 - 使用表情ID回应')
-      .example('stick 赞,踩 - 使用表情名称回应')
+      .usage('对消息进行表情回应，默认点赞')
+      .example('stick 76,77 - 使用表情ID 76和77回应')
+      .example('stick 赞,踩 - 使用"赞"和"踩"表情回应')
       .action(async ({ session }, faceId) => {
         try {
           const targetId = session.quote?.messageId || session.messageId
@@ -123,7 +123,8 @@ export class Stick {
           }
         } catch (e) { return handleError(e, '表情回应失败:') }
       })
-    stick.subcommand('.random [count:number]', '回应随机表情')
+    stick.subcommand('.random [count:number]', '随机表情')
+      .usage('使用随机表情回应消息')
       .action(async ({ session }, count = 1) => {
         try {
           const targetId = session.quote?.messageId || session.messageId
@@ -131,14 +132,15 @@ export class Stick {
         } catch (e) { return handleError(e, '随机表情发送失败:') }
       })
     stick.subcommand('.search [keyword:string]', '搜索表情')
-      .example('stick.search 龙 - 搜索包含"龙"的表情')
+      .usage('搜索指定关键词的表情')
       .action(({}, keyword) => {
         try {
           if (!keyword) return '请输入要搜索的关键词'
           return this.formatEmojiList(Object.entries(EMOJI_MAP).filter(([n]) => n.includes(keyword)), 1, keyword)
         } catch (e) { return handleError(e, '表情搜索失败:') }
       })
-    stick.subcommand('.list [page:number]', '查看支持的表情列表')
+    stick.subcommand('.list [page:number]', '表情列表')
+      .usage('分页查看表情列表')
       .action(({}, page = 1) => {
         try { return this.formatEmojiList(Object.entries(EMOJI_MAP), page) }
         catch (e) { return handleError(e, '表情列表获取失败:') }

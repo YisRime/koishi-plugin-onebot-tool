@@ -126,38 +126,38 @@ export class Zanwo {
       await utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
       return ''
     }
-    const zanwo = parentCmd.subcommand('zanwo', '点赞')
+    const zanwo = parentCmd.subcommand('zanwo', '点赞功能')
       .alias('赞我')
       .usage('点赞自己 50 下')
       .action(async ({ session }) => handleReply(session, (await this.sendLike(session, session.userId)) ? `点赞完成，记得回赞哦~` : '点赞失败，请尝试添加好友'))
-    zanwo.subcommand('.list', { authority: 3 })
-      .usage('查看点赞列表')
+    zanwo.subcommand('.list', '查看列表', { authority: 3 })
+      .usage('查看自动点赞用户列表')
       .action(async () => {
         const targets = await this.handleTargets('get') as string[]
         return targets.length ? `当前点赞列表（共${targets.length}人）：${targets.join(', ')}` : '点赞列表为空'
       })
-    zanwo.subcommand('.add <target:text>', { authority: 2 })
+    zanwo.subcommand('.add <target:text>', '添加用户', { authority: 2 })
       .usage('添加用户到点赞列表')
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
         return handleReply(session, userId && await this.handleTargets('add', userId) ? `已添加 ${userId} 到点赞列表` : '添加失败')
       })
-    zanwo.subcommand('.remove <target:text>', { authority: 2 })
-      .usage('从点赞列表移除用户')
+    zanwo.subcommand('.remove <target:text>', '移除用户', { authority: 2 })
+      .usage('从列表移除指定用户')
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
         return handleReply(session, userId && await this.handleTargets('remove', userId) ? `已从点赞列表移除 ${userId}` : '移除失败')
       })
-    zanwo.subcommand('.user <target:text>')
-      .usage('点赞指定用户')
+    zanwo.subcommand('.user <target:text>', '点赞用户')
+      .usage('给指定用户点赞')
       .action(async ({ session }, target) => {
         const userId = utils.parseTarget(target)
         return handleReply(session, userId && await this.sendLike(session, userId) ? `点赞完成，记得回赞哦~` : '点赞失败，请尝试添加好友')
       })
-    zanwo.subcommand('.all', { authority: 3 })
-      .usage('立即点赞列表中所有人')
+    zanwo.subcommand('.all', '全部点赞', { authority: 3 })
+      .usage('点赞列表中所有用户')
       .action(async ({ session }) => (this.executeAutoLike(session), '已开始点赞'))
-    zanwo.subcommand('.clear', { authority: 4 })
+    zanwo.subcommand('.clear', '清空列表', { authority: 4 })
       .usage('清空点赞列表')
       .action(async () => (this.handleTargets('clear'), '已清空点赞列表'))
   }

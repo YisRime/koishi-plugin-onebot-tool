@@ -70,8 +70,9 @@ export class Voice {
     /**
      * 注册 aisay 命令
      */
-    const voice = parentCmd.subcommand('aisay <character:string> <text:text>', '发送AI语音')
+    const voice = parentCmd.subcommand('aisay <character:string> <text:text>', 'AI语音')
       .channelFields(['guildId'])
+      .usage('使用指定角色发送AI语音')
       .action(async ({ session }, character, text) => {
         if (!await checkParams(session, character, text)) return ''
         try {
@@ -84,8 +85,9 @@ export class Voice {
         }
         return ''
       })
-    voice.subcommand('.list', '语音角色列表')
+    voice.subcommand('.list', '角色列表')
       .channelFields(['guildId'])
+      .usage('显示所有AI语音角色')
       .action(async ({ session }) => {
         try {
           const typeMap = await fetchAllCharacters(session)
@@ -97,8 +99,9 @@ export class Voice {
           return ''
         }
       })
-    voice.subcommand('.text <character:string> <text:text>', '文字转AI语音')
+    voice.subcommand('.text <character:string> <text:text>', '转换语音')
       .channelFields(['guildId'])
+      .usage('将文字转换为语音消息')
       .action(async ({ session }, character, text) => {
         if (!await checkParams(session, character, text)) return ''
         try {
@@ -112,8 +115,9 @@ export class Voice {
           return '语音生成失败'
         }
       })
-    voice.subcommand('.view <key:string>', '语音角色预览')
+    voice.subcommand('.view <key:string>', '角色预览')
       .channelFields(['guildId'])
+      .usage('发送指定角色的预览音频')
       .action(async ({ session }, key) => {
         if (!key) {
           const m = await session.send('请输入角色ID或名称')
