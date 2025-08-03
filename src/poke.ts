@@ -24,7 +24,6 @@ interface PokeResponse {
 export class Poke {
   private cache = new Map<string, number>();
   private totalWeight = 0;
-  private commandCooldown = new Map<string, number>();
   private imagesPath: string;
   private logger: any;
 
@@ -52,7 +51,6 @@ export class Poke {
    */
   dispose() {
     this.cache.clear();
-    this.commandCooldown.clear();
   }
 
   /**
@@ -150,17 +148,6 @@ export class Poke {
       .example('poke 3 @12345 - 拍用户@12345三次')
       .action(async ({ session }, times, target) => {
         try {
-          const cdTime = this.config.cdTime * 1000, now = Date.now();
-          const isResponseTriggered = session._responseTriggered === true;
-          if (cdTime > 0 && !isResponseTriggered) {
-            const lastUsed = this.commandCooldown.get(session.userId) || 0;
-            const cooldownRemaining = lastUsed + cdTime - now;
-            if (cooldownRemaining > 0) {
-              const msgId = await session.send(`请等待${Math.ceil(cooldownRemaining / 1000)}秒后再拍一拍哦~`);
-              utils.autoRecall(session, Array.isArray(msgId) ? msgId[0] : msgId);
-              return;
-            }
-          }
           if (typeof times === 'string' && !target) [target, times] = [times, 1];
           times = Math.max(1, Math.floor(Number(times)));
           if (isNaN(times)) times = 1;
@@ -178,7 +165,6 @@ export class Poke {
             });
             if (times > 1 && i < times - 1) await new Promise(r => setTimeout(r, this.config.actionInterval));
           }
-          if (this.config.cdTime > 0 && !isResponseTriggered) this.commandCooldown.set(session.userId, now);
           return '';
         } catch { return; }
       });
@@ -191,11 +177,11 @@ export class Poke {
    */
   async processNotice(session: Session): Promise<boolean> {
     if (session.subtype !== "poke" || session.targetId !== session.selfId) return false;
-    if (this.config?.interval > 0) {
-      const lastTime = this.cache.get(session.userId);
-      if (lastTime && (session.timestamp - lastTime < this.config.interval)) return false;
-      this.cache.set(session.userId, session.timestamp);
-    }
+
+    const lastTime = this.cache.get(session.userId);
+    if (lastTime && (session.timestamp - lastTime < 1000)) return false;
+    this.cache.set(session.userId, session.timestamp);
+
     if (!this.config?.responses?.length) return false;
     const response = this.randomResponse();
     if (!response) return false;

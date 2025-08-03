@@ -100,13 +100,13 @@ OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音
 
 ### 群打卡指令
 
-- `sign` - 为当前群发起打卡
-- `sign.group <群号>` - 为指定群发起打卡
-- `sign.list` - 查看当前打卡列表中的群（需要权限等级3）
-- `sign.add <群号>` - 添加指定群到打卡列表（需要权限等级2）
-- `sign.remove <群号>` - 从打卡列表移除指定群（需要权限等级2）
-- `sign.all` - 立即执行对所有群的打卡（需要权限等级3）
-- `sign.clear` - 清空打卡列表（需要权限等级4）
+- `gsign` - 为当前群发起打卡
+- `gsign.group <群号>` - 为指定群发起打卡
+- `gsign.list` - 查看当前打卡列表中的群（需要权限等级3）
+- `gsign.add <群号>` - 添加指定群到打卡列表（需要权限等级2）
+- `gsign.remove <群号>` - 从打卡列表移除指定群（需要权限等级2）
+- `gsign.all` - 立即执行对所有群的打卡（需要权限等级3）
+- `gsign.clear` - 清空打卡列表（需要权限等级4）
 
 ### AI 语音指令
 
@@ -123,8 +123,6 @@ OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音
 | `signMode` | 群打卡模式（off/manual/auto） | `off` |
 | `stickMode` | 表情回应模式（off/keyword/emoji/all） | `off` |
 | `enabled` | 启用自动响应拍一拍 | `true` |
-| `interval` | 拍一拍响应间隔（毫秒） | `1000` |
-| `cdTime` | 命令冷却时间（秒） | `10` |
 | `maxTimes` | 单次拍一拍最大次数 | `3` |
 | `actionInterval` | 连续拍一拍间隔（毫秒） | `500` |
 | `keywordEmojis` | 关键词触发的表情回应配置 | `[{"keyword":"点赞","emojiId":"76"}]` |
@@ -135,8 +133,6 @@ OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音
 autoLike: true         # 启用每日自动点赞
 stickMode: 'off'       # 表情回应模式：'off'(关闭)、'keyword'(仅关键词)、'emoji'(仅同表情)、'all'(二者)
 enabled: true          # 启用自动响应拍一拍
-interval: 1000         # 拍一拍响应间隔(ms)，设置为0关闭限制
-cdTime: 10             # 命令冷却时间(秒)，设置为0关闭限制
 maxTimes: 3            # 单次拍一拍最大次数(1-200)
 actionInterval: 500    # 连续拍一拍间隔(ms)
 keywordEmojis:         # 关键词触发的表情回应配置

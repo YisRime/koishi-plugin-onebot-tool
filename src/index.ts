@@ -73,16 +73,12 @@ export interface Config {
     zanwoMode: ZanwoMode
     /** 拍一拍模式设置 */
     pokeMode: PokeMode
-    /** 拍一拍响应间隔(毫秒) */
-    interval: number
     /** 表情回应模式 */
     stickMode: StickMode
     /** 单次拍一拍最大次数 */
     maxTimes: number
     /** 连续拍一拍间隔(毫秒) */
     actionInterval: number
-    /** 命令冷却时间(秒) */
-    cdTime: number
     /** 拍一拍响应列表 */
     responses?: Array<{
       /** 响应类型：命令或消息 */
@@ -135,14 +131,10 @@ export const Config: Schema<Config> = Schema.intersect([
     ]).description('表情回应模式').default(StickMode.Manual)
   }).description('功能配置'),
   Schema.object({
-    cdTime: Schema.number()
-      .description('拍一拍冷却时间（秒）').default(10).min(0),
     maxTimes: Schema.number()
       .description('拍一拍单次限制').default(3).min(1).max(200),
     actionInterval: Schema.number()
       .description('拍一拍单次间隔（毫秒）').default(500).min(100),
-    interval: Schema.number()
-      .description('拍一拍响应间隔（毫秒）').default(1000).min(0),
     imagesPath: Schema.string()
       .description('占位符"{pixiv}"数据地址')
       .default('https://raw.githubusercontent.com/YisRime/koishi-plugin-onebot-tool/main/resource/pixiv.json'),

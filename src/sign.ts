@@ -145,7 +145,7 @@ export class Sign {
       await utils.autoRecall(session, Array.isArray(msg) ? msg[0] : msg)
       return ''
     }
-    const sign = parentCmd.subcommand('sign', '打卡功能')
+    const sign = parentCmd.subcommand('gsign', '群打卡')
       .usage('在当前群进行打卡')
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
