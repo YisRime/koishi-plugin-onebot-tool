@@ -146,7 +146,7 @@ export const Config: Schema<Config> = Schema.intersect([
       content: Schema.string().description('响应内容'),
       weight: Schema.number().description('触发权重').default(50).min(0).max(100)
     })).default([
-      { type: 'message', content: '{at}你干嘛~{username}！', weight: 0 },
+      { type: 'message', content: '{at}你干嘛~！', weight: 0 },
       { type: 'message', content: '{hitokoto}', weight: 0 },
       { type: 'message', content: '稍等哦~插画一会就来~{~}{pixiv}', weight: 100 },
       { type: 'command', content: 'poke', weight: 0 }

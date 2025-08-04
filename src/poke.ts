@@ -130,7 +130,7 @@ export class Poke {
     }
     let result = content
       .replace(/{at}/g, `<at id="${session.userId}"/>`)
-      .replace(/{username}/g, session.username || session.userId)
+      .replace(/{username}/g, session.username)
       .replace(/{image:([^}]+)}/g, '<image url="$1"/>');
     hitokotoContents.forEach(({ pattern, content }) => result = result.replace(pattern, content));
     pixivContents.forEach(({ pattern, content }) => result = result.replace(pattern, content));

@@ -140,7 +140,7 @@ keywordEmojis:         # 关键词触发的表情回应配置
     emojiId: '76'      # 表情ID或名称
 responses:             # 拍一拍响应列表
   - type: 'message'    # 类型：message(消息)或command(命令)
-    content: '{at}你干嘛~{username}！'
+    content: '{at}你干嘛~！'
     weight: 0          # 触发概率权重(0-100)
   - type: 'message'
     content: '{hitokoto}'
