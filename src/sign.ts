@@ -84,7 +84,7 @@ export class Sign {
    */
   private async executeAutoSign(session?) {
     try {
-      const bot = session?.bot || this.ctx.bots.find(b => b.platform === 'onebot' && b.status === 'online');
+      const bot = session?.bot || this.ctx.bots.find(b => b.platform === 'onebot');
       const targets = this.config.signMode === SignMode.Auto
         ? await this.getAllGroups(bot)
         : [...this.targets];
@@ -144,13 +144,14 @@ export class Sign {
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
         const success = await this.sendGroupSign(session.bot, session.guildId)
-        return handleReply(session, success ? `群 ${session.guildId} 打卡成功~` : '群打卡失败')
+        if (!success) return handleReply(session, '群打卡失败')
+        return ''
       })
     sign.subcommand('.list', '查看列表', { authority: 3 })
       .usage('查看打卡群列表')
       .action(async () => {
         const targets = await this.handleTargets('get') as string[]
-        return targets.length ? `手动模式 - 当前群打卡列表（共${targets.length}个群）` : '手动模式 - 群打卡列表为空'
+        return targets.length ? `当前群打卡列表（共${targets.length}个群）` : '群打卡列表为空'
       })
     sign.subcommand('.group <target:text>', '指定打卡')
       .usage('打卡指定群')
@@ -158,7 +159,8 @@ export class Sign {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
         const success = await this.sendGroupSign(session.bot, groupId)
-        return handleReply(session, success ? `群 ${groupId} 打卡成功~` : '群打卡失败')
+        if (!success) return handleReply(session, '群打卡失败')
+        return ''
       })
     sign.subcommand('.all', '全部打卡', { authority: 3 })
       .usage('打卡所有列表中的群')
