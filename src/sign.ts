@@ -64,13 +64,13 @@ export class Sign {
 
   /**
    * 获取所有群列表
-   * @param session Koishi 会话对象
+   * @param bot Koishi Bot 对象
    * @returns 群ID数组
    * @private
    */
-  private async getAllGroups(session) {
+  private async getAllGroups(bot) {
     try {
-      return (await session.bot.internal.getGroupList()).map(g => String(g.group_id))
+      return (await bot.internal.getGroupList()).map(g => String(g.group_id))
     } catch (e) {
       this.logger.error('获取群列表失败:', e)
       return []
@@ -84,21 +84,15 @@ export class Sign {
    */
   private async executeAutoSign(session?) {
     try {
-      let targets: string[] = []
-      if (this.config.signMode === SignMode.Auto) {
-        if (!session?.bot) return
-        targets = await this.getAllGroups(session)
-      } else {
-        targets = [...this.targets]
-      }
-      if (!targets.length) return
-      let successCount = 0
-      for (const groupId of targets)
-        if (await this.sendGroupSign(session, groupId)) successCount++
-        else this.logger.warn(`群 ${groupId} 打卡失败`)
-      this.logger.info(`自动群打卡完成：成功 ${successCount}/${targets.length} 个群`)
+      const bot = session?.bot || this.ctx.bots.find(b => b.platform === 'onebot' && b.status === 'online');
+      const targets = this.config.signMode === SignMode.Auto
+        ? await this.getAllGroups(bot)
+        : [...this.targets];
+
+      if (!bot || !targets.length) return;
+      for (const groupId of targets) await this.sendGroupSign(bot, groupId)
     } catch (e) {
-      this.logger.error('自动群打卡出错：', e)
+      this.logger.error('自动群打卡出错：', e);
     }
   }
 
@@ -117,20 +111,20 @@ export class Sign {
       return changed
     }
     if (!groupId || !/^\d+$/.test(groupId)) return false
-    const changed = action === 'add' ? this.targets.add(groupId) : this.targets.delete(groupId)
+    const changed = action === 'add' ? !!this.targets.add(groupId) : !!this.targets.delete(groupId)
     if (changed) await utils.saveModuleData(this.ctx.baseDir, this.moduleName, [...this.targets], this.logger)
     return changed
   }
 
   /**
    * 发送群打卡请求
-   * @param session Koishi 会话对象
+   * @param bot Koishi Bot 对象
    * @param groupId 群ID
    * @returns 是否打卡成功
    */
-  async sendGroupSign(session, groupId: string) {
+  async sendGroupSign(bot, groupId: string) {
     try {
-      await session.bot.internal.sendGroupSign(groupId)
+      await bot.internal.sendGroupSign(groupId)
       return true
     } catch { return false }
   }
@@ -149,7 +143,7 @@ export class Sign {
       .usage('在当前群进行打卡')
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
-        const success = await this.sendGroupSign(session, session.guildId)
+        const success = await this.sendGroupSign(session.bot, session.guildId)
         return handleReply(session, success ? `群 ${session.guildId} 打卡成功~` : '群打卡失败')
       })
     sign.subcommand('.list', '查看列表', { authority: 3 })
@@ -163,7 +157,7 @@ export class Sign {
       .action(async ({ session }, target) => {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
-        const success = await this.sendGroupSign(session, groupId)
+        const success = await this.sendGroupSign(session.bot, groupId)
         return handleReply(session, success ? `群 ${groupId} 打卡成功~` : '群打卡失败')
       })
     sign.subcommand('.all', '全部打卡', { authority: 3 })
