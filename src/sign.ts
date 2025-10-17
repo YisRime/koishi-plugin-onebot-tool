@@ -90,7 +90,7 @@ export class Sign {
         ? await this.getAllGroups(bot)
         : [...this.targets];
 
-      if (!targets.length) return;
+      if (!targets.length) this.logger.info(`群打卡列表为空`);
       for (const groupId of targets) {
         try {
           await bot.internal.sendGroupSign(groupId)
@@ -98,6 +98,7 @@ export class Sign {
           this.logger.error(`群 ${groupId} 打卡失败: ${e.message}`, e)
         }
       }
+      return this.logger.info(`已自动群打卡 ${targets.length} 个群`);
     } catch (e) {
       this.logger.error('自动群打卡出错：', e);
     }
@@ -175,7 +176,10 @@ export class Sign {
       .usage('打卡所有列表中的群')
       .option('silent', '-s 模拟定时器触发')
       .action(async ({ session, options }) => {
-        if (options.silent) this.executeAutoSign()
+        if (options.silent) {
+          this.executeAutoSign()
+          return
+        }
         await handleReply(session, `已开始群打卡，请稍候...`)
         await this.executeAutoSign(session)
         return '群打卡完成'
