@@ -85,12 +85,19 @@ export class Sign {
   private async executeAutoSign(session?) {
     try {
       const bot = session?.bot || this.ctx.bots.find(b => b.platform === 'onebot');
+      if (!bot) return;
       const targets = this.config.signMode === SignMode.Auto
         ? await this.getAllGroups(bot)
         : [...this.targets];
 
-      if (!bot || !targets.length) return;
-      for (const groupId of targets) await this.sendGroupSign(bot, groupId)
+      if (!targets.length) return;
+      for (const groupId of targets) {
+        try {
+          await bot.internal.sendGroupSign(groupId)
+        } catch (e) {
+          this.logger.error(`群 ${groupId} 打卡失败: ${e.message}`, e)
+        }
+      }
     } catch (e) {
       this.logger.error('自动群打卡出错：', e);
     }
@@ -111,22 +118,17 @@ export class Sign {
       return changed
     }
     if (!groupId || !/^\d+$/.test(groupId)) return false
-    const changed = action === 'add' ? !!this.targets.add(groupId) : !!this.targets.delete(groupId)
+    const hasGroup = this.targets.has(groupId)
+    let changed = false
+    if (action === 'add' && !hasGroup) {
+      this.targets.add(groupId)
+      changed = true
+    } else if (action === 'remove' && hasGroup) {
+      this.targets.delete(groupId)
+      changed = true
+    }
     if (changed) await utils.saveModuleData(this.ctx.baseDir, this.moduleName, [...this.targets], this.logger)
     return changed
-  }
-
-  /**
-   * 发送群打卡请求
-   * @param bot Koishi Bot 对象
-   * @param groupId 群ID
-   * @returns 是否打卡成功
-   */
-  async sendGroupSign(bot, groupId: string) {
-    try {
-      await bot.internal.sendGroupSign(groupId)
-      return true
-    } catch { return false }
   }
 
   /**
@@ -143,28 +145,37 @@ export class Sign {
       .usage('在当前群进行打卡')
       .action(async ({ session }) => {
         if (!session.guildId) return handleReply(session, '请在群内使用该命令')
-        const success = await this.sendGroupSign(session.bot, session.guildId)
-        if (!success) return handleReply(session, '群打卡失败')
-        return ''
+        try {
+          await session.bot.internal.sendGroupSign(session.guildId)
+        } catch (e) {
+          this.logger.error(`群 ${session.guildId} 打卡失败:`, e)
+          return handleReply(session, `群打卡失败: ${e.message}`)
+        }
       })
     sign.subcommand('.list', '查看列表', { authority: 3 })
       .usage('查看打卡群列表')
       .action(async () => {
         const targets = await this.handleTargets('get') as string[]
-        return targets.length ? `当前群打卡列表（共${targets.length}个群）` : '群打卡列表为空'
+        return targets.length ? `当前群打卡列表（共${targets.length}个群）:\n${targets.join('\n')}` : '群打卡列表为空'
       })
     sign.subcommand('.group <target:text>', '指定打卡')
       .usage('打卡指定群')
       .action(async ({ session }, target) => {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
-        const success = await this.sendGroupSign(session.bot, groupId)
-        if (!success) return handleReply(session, '群打卡失败')
-        return ''
+        try {
+          await session.bot.internal.sendGroupSign(groupId)
+        } catch (e) {
+          const reason = e.message || '未知错误'
+          this.logger.error(`群 ${groupId} 打卡失败:`, e)
+          return handleReply(session, `群打卡失败: ${reason}`)
+        }
       })
     sign.subcommand('.all', '全部打卡', { authority: 3 })
       .usage('打卡所有列表中的群')
-      .action(async ({ session }) => {
+      .option('silent', '-s 模拟定时器触发')
+      .action(async ({ session, options }) => {
+        if (options.silent) this.executeAutoSign()
         await handleReply(session, `已开始群打卡，请稍候...`)
         await this.executeAutoSign(session)
         return '群打卡完成'
@@ -175,7 +186,7 @@ export class Sign {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
         const success = await this.handleTargets('add', groupId)
-        return handleReply(session, success ? `已添加群 ${groupId} 到打卡列表` : '添加失败')
+        return handleReply(session, success ? `已添加群 ${groupId} 到打卡列表` : `群 ${groupId} 已存在于列表中`)
       })
     sign.subcommand('.remove <target:text>', '移除群', { authority: 2 })
       .usage('从打卡列表移除群')
@@ -183,13 +194,13 @@ export class Sign {
         const groupId = target.trim()
         if (!groupId || !/^\d+$/.test(groupId)) return handleReply(session, '请输入有效的群号')
         const success = await this.handleTargets('remove', groupId)
-        return handleReply(session, success ? `已从打卡列表移除群 ${groupId}` : '移除失败')
+        return handleReply(session, success ? `已从打卡列表移除群 ${groupId}` : `群 ${groupId} 不在列表中`)
       })
     sign.subcommand('.clear', '清空列表', { authority: 4 })
       .usage('清空打卡列表')
-      .action(async () => {
-        await this.handleTargets('clear')
-        return '已清空群打卡列表'
+      .action(async ({ session }) => {
+        const changed = await this.handleTargets('clear')
+        return handleReply(session, changed ? '已清空群打卡列表' : '群打卡列表本就为空')
       })
   }
 
