@@ -176,7 +176,7 @@ export class Poke {
    * @returns 是否已响应
    */
   async processNotice(session: Session): Promise<boolean> {
-    if (session.subtype !== "poke" || session.targetId !== session.selfId) return false;
+    if (session.subtype !== "poke" || session.targetId !== session.selfId || session.userId === session.selfId) return false;
 
     const lastTime = this.cache.get(session.userId);
     if (lastTime && (session.timestamp - lastTime < 1000)) return false;
