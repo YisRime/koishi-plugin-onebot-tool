@@ -35,14 +35,7 @@ export class Poke {
    */
   constructor(private ctx: Context, private config: Config, logger: any) {
     this.logger = logger;
-    if (config?.responses?.length) {
-      this.totalWeight = config.responses.reduce((sum, resp) => sum + resp.weight, 0);
-      if (this.totalWeight > 100) {
-        const scale = 100 / this.totalWeight;
-        config.responses.forEach(resp => resp.weight *= scale);
-        this.totalWeight = 100;
-      }
-    }
+    if (config?.responses?.length) this.totalWeight = config.responses.reduce((sum, resp) => sum + resp.weight, 0);
     this.imagesPath = config.imagesPath;
   }
 
@@ -182,7 +175,6 @@ export class Poke {
     if (lastTime && (session.timestamp - lastTime < 1000)) return false;
     this.cache.set(session.userId, session.timestamp);
 
-    if (!this.config?.responses?.length) return false;
     const response = this.randomResponse();
     if (!response) return false;
     try {
@@ -201,14 +193,19 @@ export class Poke {
 
   /**
    * 随机选择一个拍一拍响应
-   * @returns 响应对象
+   * @returns 响应对象或null
    * @private
    */
-  private randomResponse(): PokeResponse {
-    if (!this.config?.responses?.length) return null;
+  private randomResponse(): PokeResponse | null {
+    if (!this.config?.responses?.length || this.totalWeight <= 0) return null;
     const responses = this.config.responses;
-    let sum = 0, random = Math.random() * this.totalWeight;
-    for (const response of responses) if ((sum += response.weight) > random) return response;
-    return responses[0];
+    const random = Math.random() * 100;
+    if (random > this.totalWeight) return null;
+    const randomChoice = Math.random() * this.totalWeight;
+    let cumulativeWeight = 0;
+    for (const response of responses) {
+      cumulativeWeight += response.weight;
+      if (randomChoice < cumulativeWeight) return response;
+    }
   }
 }

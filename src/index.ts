@@ -146,10 +146,10 @@ export const Config: Schema<Config> = Schema.intersect([
       content: Schema.string().description('响应内容'),
       weight: Schema.number().description('触发权重').default(50).min(0).max(100)
     })).default([
-      { type: 'message', content: '{at}你干嘛~！', weight: 0 },
-      { type: 'message', content: '{hitokoto}', weight: 0 },
-      { type: 'message', content: '稍等哦~插画一会就来~{~}{pixiv}', weight: 100 },
-      { type: 'command', content: 'poke', weight: 0 }
+      { type: 'message', content: '{at}你干嘛~！', weight: 20 },
+      { type: 'message', content: '{hitokoto}', weight: 20 },
+      { type: 'message', content: '稍等哦~插画一会就来~{~}{pixiv}', weight: 20 },
+      { type: 'command', content: 'poke', weight: 20 }
     ]).description('拍一拍响应列表').role('table'),
     keywordEmojis: Schema.array(Schema.object({
       keyword: Schema.string().description('触发关键词'),
