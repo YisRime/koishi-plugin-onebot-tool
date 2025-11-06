@@ -1,14 +1,14 @@
 {
   "name": "koishi-plugin-onebot-tool",
   "description": "OneBot 工具集，带有点赞、打卡、拍一拍、表情回应和 AI 语音等功能，可独立开关和自由配置",
-  "version": "2.4.9",
+  "version": "2.5.0",
   "contributors": [
     "Yis_Rime <yis_rime@outlook.com>"
   ],
-  "homepage": "https://github.com/YisRime/koishi-plugin-onebot-tool",
+  "homepage": "https://github.com//Koishi-Plugin/onebot-tool",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YisRime/koishi-plugin-onebot-tool.git"
+    "url": "git+https://github.com//Koishi-Plugin/onebot-tool.git"
   },
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",

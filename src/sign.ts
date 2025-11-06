@@ -50,8 +50,9 @@ export class Sign {
    */
   private startAutoSignTimer() {
     this.cronJob?.dispose()
+    this.cronJob = null
     this.timer && clearInterval(this.timer)
-    this.cronJob = this.timer = null
+    this.timer = null
     if (this.config.signMode !== SignMode.Auto) return
     if (typeof this.ctx.cron === 'function') {
       this.cronJob = this.ctx.cron('0 0 * * *', () => this.executeAutoSign())
@@ -209,7 +210,7 @@ export class Sign {
   }
 
   /**
-   * 释放资源，清理定时任务和计时器
+   * 释放资源，清理定时任务和计时器 (已修复)
    */
   dispose() {
     this.cronJob?.dispose()
